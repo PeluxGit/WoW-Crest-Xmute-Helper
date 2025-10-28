@@ -48,6 +48,7 @@
         "EditMacro",
         "MAX_CHARACTER_MACROS",
         "PickupMacro",
-        "GetCursorPosition"
+        "GetCursorPosition",
+        "GetTime"
   ]
 }
