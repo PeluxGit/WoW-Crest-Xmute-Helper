@@ -30,6 +30,18 @@ function Addon:GetTrackedUnion()
     return u
 end
 
+-- Fire whenever tracked items change so UI + macro stay in sync.
+function Addon:TrackedChanged()
+    -- Refresh the list UI if it’s visible
+    if self.Container and self.Container:IsShown() and self.RefreshList then
+        self:RefreshList()
+    end
+    -- Always rebuild the macro so Buy+Open reflects the latest set
+    if self.SyncOpenMacro then
+        self:SyncOpenMacro(true)
+    end
+end
+
 -- unified way to get an icon; requests load and lets UI refresh via GET_ITEM_INFO_RECEIVED
 function Addon:GetItemIcon(itemID)
     if not itemID then return 134400 end
@@ -62,6 +74,7 @@ function Addon:AddTracked(itemID)
     CrestXmuteDB.user.toggles[itemID] = CrestXmuteDB.user.toggles[itemID] or { buy = true, open = true, confirm = true }
     if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) end
     if self.RebuildTrackedCache then self:RebuildTrackedCache() end
+    self:TrackedChanged()
     return true
 end
 
@@ -71,6 +84,7 @@ function Addon:RemoveTracked(itemID)
     CrestXmuteDB.user.tracked[itemID] = nil
     CrestXmuteDB.user.toggles[itemID] = nil
     if self.RebuildTrackedCache then self:RebuildTrackedCache() end
+    self:TrackedChanged()
     return true
 end
 
