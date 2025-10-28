@@ -3,18 +3,17 @@ local ADDON_NAME, Addon = ...
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- Fallback layout constants (if layout module not loaded yet)
+-- Layout defaults
 UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
 UI.LEFT_PAD             = UI.LEFT_PAD or 10
 UI.ICON_W               = UI.ICON_W or 24
 UI.ICON_PAD             = UI.ICON_PAD or 8
-UI.NAME_COL_W           = UI.NAME_COL_W or 220
+UI.NAME_COL_W           = UI.NAME_COL_W or 236
 UI.ROW_H                = UI.ROW_H or 32
-UI.MAX_H                = UI.MAX_H or 460
+UI.MAX_H                = UI.MAX_H or 560
 UI.COL_W                = UI.COL_W or 22
-UI.COL_SP               = UI.COL_SP or 10
+UI.COL_SP               = UI.COL_SP or 12
 
--- Panel movement: only when clicking OUTSIDE the scroll area
 local function MakeMovable(frame)
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
@@ -64,7 +63,7 @@ local function DockOutsideMerchant(f)
     end
 end
 
--- ===== Add Mode (hook merchant buttons to add tracked items) =====
+-- merchant hooks for Add Mode
 local function GetMerchantItemButton(i) return _G["MerchantItem" .. i .. "ItemButton"] end
 
 function Addon:_HookMerchantButtonsForAddMode()
@@ -80,10 +79,9 @@ function Addon:_HookMerchantButtonsForAddMode()
                     if orig then orig(b, mouseButton) end
                     return
                 end
-                local idx  = b:GetID()
-                local link = GetMerchantItemLink(idx)
-                local itemID
-                if link then itemID = select(1, GetItemInfoInstant(link)) end
+                local idx    = b:GetID()
+                local link   = GetMerchantItemLink(idx)
+                local itemID = link and select(1, GetItemInfoInstant(link)) or nil
                 if itemID and self.AddTracked and self:AddTracked(itemID) then
                     local name = GetItemInfo(itemID) or ("item:" .. itemID)
                     UIErrorsFrame:AddMessage("|cff33ff99CrestXmute: Added|r " .. name)
@@ -125,7 +123,6 @@ function Addon:SetAddMode(flag)
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
 
--- Secure macro clicker text (do nothing in combat)
 function Addon:UpdateClickerMacroText(body)
     if not self.Container or not self.Container.Clicker or InCombatLockdown() then return end
     self.Container.Clicker:SetAttribute("type", "macro")
@@ -136,15 +133,15 @@ function Addon:EnsureUI()
     if self.Container then return end
 
     local baseW = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
-        + 12 + (UI.COL_W * 3) + (UI.COL_SP * 2) + 24 + UI.CONTENT_PAD + 12
+        + 24 + (UI.COL_W * 3) + (UI.COL_SP * 2) + 32 + UI.CONTENT_PAD + 12
     local container = CreateFrame("Frame", "CrestXmutePanel", UIParent, "InsetFrameTemplate3")
-    container:SetSize(baseW, 300)
+    container:SetSize(baseW, 340)
     container:SetFrameStrata("HIGH")
     container:SetClampedToScreen(true)
     MakeMovable(container)
 
     local bg = container:CreateTexture(nil, "BACKGROUND", nil, -7)
-    bg:SetColorTexture(0, 0, 0, 0.38)
+    bg:SetColorTexture(0, 0, 0, 0.42)
     bg:SetPoint("TOPLEFT", 3, -3)
     bg:SetPoint("BOTTOMRIGHT", -3, 3)
 
@@ -154,7 +151,6 @@ function Addon:EnsureUI()
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
 
-    -- Add-Mode toggle
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     addMode:SetPoint("TOPRIGHT", -10, -6)
     addMode:SetScale(0.9)
@@ -165,11 +161,10 @@ function Addon:EnsureUI()
     addMode.Label = lbl
     container.AddModeBtn = addMode
 
-    -- Scroll area
     local scroll = CreateFrame("ScrollFrame", "CrestXmuteScroll", container, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 8, -52)
     scroll:SetPoint("BOTTOMRIGHT", -28, 40)
-    scroll:EnableMouse(true) -- prevents panel from moving when dragging rows
+    scroll:EnableMouse(true)
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(1, 1)
     scroll:SetScrollChild(content)
@@ -178,14 +173,12 @@ function Addon:EnsureUI()
     container.Content  = content
     container.HeadersY = 52
 
-    -- Column x positions (relative to container left)
     local nameStartX   = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
-    local buyX         = nameStartX + UI.NAME_COL_W + 12
+    local buyX         = nameStartX + UI.NAME_COL_W + 28
     local openX        = buyX + UI.COL_W + UI.COL_SP
     local confX        = openX + UI.COL_W + UI.COL_SP
     container._colsX   = { buyX, openX, confX }
 
-    -- Headers aligned with columns
     local function placeHeader(fs, x)
         fs:SetWidth(UI.COL_W); fs:SetJustifyH("CENTER")
         fs:ClearAllPoints()
@@ -208,7 +201,6 @@ function Addon:EnsureUI()
     empty:SetText("No tracked items found on this vendor.\nUse /crestx add <linkOrID> or enable Add Mode.")
     container.EmptyState = empty; empty:Hide()
 
-    -- Bottom-right secure "Buy + Open"
     local clicker = CreateFrame("Button", "CrestXmuteClicker", container,
         "SecureActionButtonTemplate, UIPanelButtonTemplate")
     clicker:SetSize(140, 22)
@@ -230,6 +222,8 @@ function Addon:ShowUIForMerchant()
     if not (CrestXmuteDB and CrestXmuteDB.framePos) then DockOutsideMerchant(self.Container) end
     self.Container:Show()
     self:RefreshList()
+    -- one more refresh shortly after to catch icons/names resolving
+    C_Timer.After(0.06, function() if self.Container and self.Container:IsShown() then self:RefreshList() end end)
 end
 
 function Addon:HideUI()
