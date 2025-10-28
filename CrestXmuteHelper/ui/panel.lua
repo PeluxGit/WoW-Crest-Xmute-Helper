@@ -3,74 +3,68 @@ local ADDON_NAME, Addon = ...
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- Layout fallback defaults
+-- Fallback layout constants (if layout module not loaded yet)
 UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
 UI.LEFT_PAD             = UI.LEFT_PAD or 10
 UI.ICON_W               = UI.ICON_W or 24
 UI.ICON_PAD             = UI.ICON_PAD or 8
-UI.NAME_COL_W           = UI.NAME_COL_W or 230
+UI.NAME_COL_W           = UI.NAME_COL_W or 220
 UI.ROW_H                = UI.ROW_H or 32
-UI.MAX_H                = UI.MAX_H or 360
+UI.MAX_H                = UI.MAX_H or 460
 UI.COL_W                = UI.COL_W or 22
-UI.COL_SP               = UI.COL_SP or 8
+UI.COL_SP               = UI.COL_SP or 10
 
 -- Panel movement: only when clicking OUTSIDE the scroll area
-if not UI.MakeMovable then
-    function UI.MakeMovable(frame)
-        frame:EnableMouse(true)
-        frame:SetClampedToScreen(true)
-        frame:SetMovable(true)
-        frame._moving = false
-        frame:SetScript("OnMouseDown", function(self, btn)
-            if btn ~= "LeftButton" then return end
-            if not self.Scroll then
-                self:StartMoving(); self._moving = true; return
-            end
-            local x, y = GetCursorPosition()
-            local s = self:GetEffectiveScale()
-            x, y = x / s, y / s
-            local l = self.Scroll:GetLeft() or 0
-            local r = self.Scroll:GetRight() or 0
-            local b = self.Scroll:GetBottom() or 0
-            local t = self.Scroll:GetTop() or 0
-            local inScroll = (x >= l and x <= r and y >= b and y <= t)
-            if not inScroll then
-                self:StartMoving(); self._moving = true
-            end
-        end)
-        frame:SetScript("OnMouseUp", function(self)
-            if not self._moving then return end
-            self:StopMovingOrSizing(); self._moving = false
-            local p, rel, rp, x, y = self:GetPoint(1)
-            CrestXmuteDB = CrestXmuteDB or {}
-            CrestXmuteDB.framePos = { p, rel and rel:GetName() or "MerchantFrame", rp, x, y }
-        end)
-    end
-end
-
-if not UI.ApplySavedPosition then
-    function UI.ApplySavedPosition(f)
-        local pos = CrestXmuteDB and CrestXmuteDB.framePos
-        if not pos or not pos[1] then return false end
-        local rel = pos[2] and _G[pos[2]] or MerchantFrame or UIParent
-        f:ClearAllPoints()
-        f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
-        return true
-    end
-end
-
-if not UI.DockOutsideMerchant then
-    function UI.DockOutsideMerchant(f)
-        f:ClearAllPoints()
-        if MerchantFrame and MerchantFrame:IsShown() then
-            f:SetPoint("LEFT", MerchantFrame, "RIGHT", 8, 0)
-        else
-            f:SetPoint("CENTER", UIParent, "CENTER")
+local function MakeMovable(frame)
+    frame:EnableMouse(true)
+    frame:SetClampedToScreen(true)
+    frame:SetMovable(true)
+    frame._moving = false
+    frame:SetScript("OnMouseDown", function(self, btn)
+        if btn ~= "LeftButton" then return end
+        if not self.Scroll then
+            self:StartMoving(); self._moving = true; return
         end
+        local x, y = GetCursorPosition()
+        local s = self:GetEffectiveScale()
+        x, y = x / s, y / s
+        local l = self.Scroll:GetLeft() or 0
+        local r = self.Scroll:GetRight() or 0
+        local b = self.Scroll:GetBottom() or 0
+        local t = self.Scroll:GetTop() or 0
+        local inScroll = (x >= l and x <= r and y >= b and y <= t)
+        if not inScroll then
+            self:StartMoving(); self._moving = true
+        end
+    end)
+    frame:SetScript("OnMouseUp", function(self)
+        if not self._moving then return end
+        self:StopMovingOrSizing(); self._moving = false
+        local p, rel, rp, x, y = self:GetPoint(1)
+        CrestXmuteDB = CrestXmuteDB or {}
+        CrestXmuteDB.framePos = { p, rel and rel:GetName() or "MerchantFrame", rp, x, y }
+    end)
+end
+
+local function ApplySavedPosition(f)
+    local pos = CrestXmuteDB and CrestXmuteDB.framePos
+    if not pos or not pos[1] then return false end
+    local rel = pos[2] and _G[pos[2]] or MerchantFrame or UIParent
+    f:ClearAllPoints()
+    f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
+    return true
+end
+
+local function DockOutsideMerchant(f)
+    f:ClearAllPoints()
+    if MerchantFrame and MerchantFrame:IsShown() then
+        f:SetPoint("LEFT", MerchantFrame, "RIGHT", 8, 0)
+    else
+        f:SetPoint("CENTER", UIParent, "CENTER")
     end
 end
 
--- ===== Add Mode (use the same path as /crestx add) =====
+-- ===== Add Mode (hook merchant buttons to add tracked items) =====
 local function GetMerchantItemButton(i) return _G["MerchantItem" .. i .. "ItemButton"] end
 
 function Addon:_HookMerchantButtonsForAddMode()
@@ -86,13 +80,17 @@ function Addon:_HookMerchantButtonsForAddMode()
                     if orig then orig(b, mouseButton) end
                     return
                 end
-                local idx    = b:GetID()
-                local link   = GetMerchantItemLink(idx)
-                local itemID = link and select(1, GetItemInfoInstant(link))
-                if itemID and Addon.AddTracked and Addon:AddTracked(itemID) then
+                local idx  = b:GetID()
+                local link = GetMerchantItemLink(idx)
+                local itemID
+                if link then itemID = select(1, GetItemInfoInstant(link)) end
+                if itemID and self.AddTracked and self:AddTracked(itemID) then
                     local name = GetItemInfo(itemID) or ("item:" .. itemID)
                     UIErrorsFrame:AddMessage("|cff33ff99CrestXmute: Added|r " .. name)
-                    if Addon.TrackedChanged then Addon:TrackedChanged() end
+                    if self.TrackedChanged then self:TrackedChanged() end
+                    if self.Container and self.Container:IsShown() and self.RefreshList then
+                        self:RefreshList()
+                    end
                 else
                     UIErrorsFrame:AddMessage("|cffff6600CrestXmute: Offer has no item (currency-only).|r")
                 end
@@ -103,6 +101,7 @@ function Addon:_HookMerchantButtonsForAddMode()
         self._merchantHideHooked = true
         MerchantFrame:HookScript("OnHide", function()
             if Addon._addMode then Addon:SetAddMode(false) end
+            Addon:HideUI()
         end)
     end
 end
@@ -126,7 +125,7 @@ function Addon:SetAddMode(flag)
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
 
--- Secure macro clicker
+-- Secure macro clicker text (do nothing in combat)
 function Addon:UpdateClickerMacroText(body)
     if not self.Container or not self.Container.Clicker or InCombatLockdown() then return end
     self.Container.Clicker:SetAttribute("type", "macro")
@@ -136,21 +135,20 @@ end
 function Addon:EnsureUI()
     if self.Container then return end
 
-    -- Tighten width to reduce right whitespace
     local baseW = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
         + 12 + (UI.COL_W * 3) + (UI.COL_SP * 2) + 24 + UI.CONTENT_PAD + 12
     local container = CreateFrame("Frame", "CrestXmutePanel", UIParent, "InsetFrameTemplate3")
     container:SetSize(baseW, 300)
     container:SetFrameStrata("HIGH")
     container:SetClampedToScreen(true)
-    UI.MakeMovable(container)
+    MakeMovable(container)
 
     local bg = container:CreateTexture(nil, "BACKGROUND", nil, -7)
-    bg:SetColorTexture(0, 0, 0, 0.35)
+    bg:SetColorTexture(0, 0, 0, 0.38)
     bg:SetPoint("TOPLEFT", 3, -3)
     bg:SetPoint("BOTTOMRIGHT", -3, 3)
 
-    if not UI.ApplySavedPosition(container) then UI.DockOutsideMerchant(container) end
+    if not ApplySavedPosition(container) then DockOutsideMerchant(container) end
 
     local title = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 10, -8)
@@ -171,7 +169,7 @@ function Addon:EnsureUI()
     local scroll = CreateFrame("ScrollFrame", "CrestXmuteScroll", container, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 8, -52)
     scroll:SetPoint("BOTTOMRIGHT", -28, 40)
-    scroll:EnableMouse(true)
+    scroll:EnableMouse(true) -- prevents panel from moving when dragging rows
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(1, 1)
     scroll:SetScrollChild(content)
@@ -180,14 +178,14 @@ function Addon:EnsureUI()
     container.Content  = content
     container.HeadersY = 52
 
-    -- Columns (same bases rows use)
+    -- Column x positions (relative to container left)
     local nameStartX   = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
     local buyX         = nameStartX + UI.NAME_COL_W + 12
     local openX        = buyX + UI.COL_W + UI.COL_SP
     local confX        = openX + UI.COL_W + UI.COL_SP
     container._colsX   = { buyX, openX, confX }
 
-    -- Headers aligned using the same left base as rows (subtract content pad)
+    -- Headers aligned with columns
     local function placeHeader(fs, x)
         fs:SetWidth(UI.COL_W); fs:SetJustifyH("CENTER")
         fs:ClearAllPoints()
@@ -229,7 +227,7 @@ end
 
 function Addon:ShowUIForMerchant()
     self:EnsureUI()
-    if not (CrestXmuteDB and CrestXmuteDB.framePos) then UI.DockOutsideMerchant(self.Container) end
+    if not (CrestXmuteDB and CrestXmuteDB.framePos) then DockOutsideMerchant(self.Container) end
     self.Container:Show()
     self:RefreshList()
 end
