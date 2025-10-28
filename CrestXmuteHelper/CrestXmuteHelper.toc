@@ -9,9 +9,9 @@ core.lua
 merchant.lua
 bags.lua
 tracking.lua
+events.lua
+macro.lua
 ui/layout.lua
 ui/panel.lua
 ui/list.lua
-events.lua
-macro.lua
 slash.lua
