@@ -1,9 +1,10 @@
+-- ui/panel.lua
 local ADDON_NAME, Addon = ...
 
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- Layout defaults
+-- Layout defaults (shared with list.lua)
 UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
 UI.LEFT_PAD             = UI.LEFT_PAD or 10
 UI.ICON_W               = UI.ICON_W or 24
@@ -14,17 +15,18 @@ UI.MAX_H                = UI.MAX_H or 560
 UI.COL_W                = UI.COL_W or 22
 UI.COL_SP               = UI.COL_SP or 12
 
+-- Recompute absolute column X positions from the container's left edge.
+-- These values are used by BOTH headers and rows (rows subtract their own local left).
 local function RecalcColumns(container)
-    local nameStartX = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
-    local available  = (container:GetWidth() or 480)
-        - nameStartX - UI.CONTENT_PAD - 32 -- trailing chrome
-    -- tighten spacing and make columns reliable
-    local buyX       = nameStartX + UI.NAME_COL_W + 24
+    local baseX      = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
+    -- Give a bit of extra padding so name text never collides with the Buy column
+    local buyX       = baseX + UI.NAME_COL_W + 36
     local openX      = buyX + UI.COL_W + UI.COL_SP
     local confX      = openX + UI.COL_W + UI.COL_SP
     container._colsX = { buyX, openX, confX }
 end
 
+-- Make the container movable, but don't steal drags from the scroll region.
 local function MakeMovable(frame)
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
@@ -74,7 +76,8 @@ local function DockOutsideMerchant(f)
     end
 end
 
--- merchant hooks for Add Mode
+-- --- Add Mode: click merchant item buttons to add to tracking ----------------
+
 local function GetMerchantItemButton(i) return _G["MerchantItem" .. i .. "ItemButton"] end
 
 function Addon:_HookMerchantButtonsForAddMode()
@@ -134,17 +137,23 @@ function Addon:SetAddMode(flag)
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
 
+-- --- Secure action “Buy + Open” button macro injector -----------------------
+
 function Addon:UpdateClickerMacroText(body)
     if not self.Container or not self.Container.Clicker or InCombatLockdown() then return end
     self.Container.Clicker:SetAttribute("type", "macro")
     self.Container.Clicker:SetAttribute("macrotext", body or "")
 end
 
+-- --- Public: build/show/hide the panel --------------------------------------
+
 function Addon:EnsureUI()
     if self.Container then return end
 
+    -- Width: icon+name + 3 columns + spacing + chrome
     local baseW = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
-        + 24 + (UI.COL_W * 3) + (UI.COL_SP * 2) + 32 + UI.CONTENT_PAD + 12
+        + 36 + (UI.COL_W * 3) + (UI.COL_SP * 2) + 32 + UI.CONTENT_PAD + 12
+
     local container = CreateFrame("Frame", "CrestXmutePanel", UIParent, "InsetFrameTemplate3")
     container:SetSize(baseW, 340)
     container:SetFrameStrata("HIGH")
@@ -156,16 +165,13 @@ function Addon:EnsureUI()
     bg:SetPoint("TOPLEFT", 3, -3)
     bg:SetPoint("BOTTOMRIGHT", -3, 3)
 
-    if not ApplySavedPosition(container) then DockOutsideMerchant(container) end
+    if not ApplySavedPosition(container) then
+        DockOutsideMerchant(container)
+    end
 
     local title = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
-    RecalcColumns(container)
-    container:SetScript("OnSizeChanged",
-        function(self)
-            RecalcColumns(self); if Addon.RefreshList then Addon:RefreshList() end
-        end)
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     addMode:SetPoint("TOPRIGHT", -10, -6)
@@ -189,23 +195,25 @@ function Addon:EnsureUI()
     container.Content  = content
     container.HeadersY = 52
 
-    local nameStartX   = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
-    local buyX         = nameStartX + UI.NAME_COL_W + 28
-    local openX        = buyX + UI.COL_W + UI.COL_SP
-    local confX        = openX + UI.COL_W + UI.COL_SP
-    container._colsX   = { buyX, openX, confX }
+    -- Compute columns now and whenever the panel resizes
+    RecalcColumns(container)
+    container:SetScript("OnSizeChanged", function(self)
+        RecalcColumns(self)
+        if Addon.RefreshList then Addon:RefreshList() end
+    end)
 
-    local function placeHeader(fs, x)
+    -- Column headers placed at absolute X positions from RecalcColumns
+    local function placeHeader(fs, absX)
         fs:SetWidth(UI.COL_W); fs:SetJustifyH("CENTER")
         fs:ClearAllPoints()
-        fs:SetPoint("TOPLEFT", container, "TOPLEFT", 8 + (x - UI.CONTENT_PAD), -32)
+        fs:SetPoint("TOPLEFT", container, "TOPLEFT", absX, -32)
     end
-    local hdrBuy = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrBuy:SetText("Buy"); placeHeader(
-        hdrBuy, buyX)
-    local hdrOpen = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrOpen:SetText("Open"); placeHeader(
-        hdrOpen, openX)
-    local hdrConf = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrConf:SetText("Conf"); placeHeader(
-        hdrConf, confX)
+    local hdrBuy = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrBuy:SetText("Buy")
+    local hdrOpen = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrOpen:SetText("Open")
+    local hdrConf = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall"); hdrConf:SetText("Conf")
+    placeHeader(hdrBuy, container._colsX[1])
+    placeHeader(hdrOpen, container._colsX[2])
+    placeHeader(hdrConf, container._colsX[3])
 
     local head = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     head:SetPoint("TOPLEFT", 10, -32)
@@ -217,6 +225,7 @@ function Addon:EnsureUI()
     empty:SetText("No tracked items found on this vendor.\nUse /crestx add <linkOrID> or enable Add Mode.")
     container.EmptyState = empty; empty:Hide()
 
+    -- Secure button: can be dragged to action bars (picks up the macro)
     local clicker = CreateFrame("Button", "CrestXmuteClicker", container,
         "SecureActionButtonTemplate, UIPanelButtonTemplate")
     clicker:SetSize(140, 22)
@@ -235,11 +244,17 @@ end
 
 function Addon:ShowUIForMerchant()
     self:EnsureUI()
-    if not (CrestXmuteDB and CrestXmuteDB.framePos) then DockOutsideMerchant(self.Container) end
+    if not (CrestXmuteDB and CrestXmuteDB.framePos) then
+        DockOutsideMerchant(self.Container)
+    end
     self.Container:Show()
-    self:RefreshList()
-    -- one more refresh shortly after to catch icons/names resolving
-    C_Timer.After(0.06, function() if self.Container and self.Container:IsShown() then self:RefreshList() end end)
+    RecalcColumns(self.Container) -- ensure cols are correct on show
+    if self.RefreshList then self:RefreshList() end
+    C_Timer.After(0.06, function()
+        if self.Container and self.Container:IsShown() and self.RefreshList then
+            self:RefreshList()
+        end
+    end)
 end
 
 function Addon:HideUI()
