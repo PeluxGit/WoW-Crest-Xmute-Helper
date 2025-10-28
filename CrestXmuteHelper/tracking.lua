@@ -1,8 +1,9 @@
 local ADDON_NAME, Addon = ...
 
--- SavedVariables layout:
+-- SavedVariables schema:
 -- CrestXmuteDB.user.tracked[itemID] = true
 -- CrestXmuteDB.user.toggles[itemID] = { buy=true, open=true, confirm=true }
+-- CrestXmuteDB.framePos = { point, relName, relPoint, x, y }
 
 local function ensureDB()
     CrestXmuteDB = CrestXmuteDB or {}
@@ -20,13 +21,11 @@ function Addon:GetTrackedSet()
     return CrestXmuteDB.user.tracked
 end
 
--- Union of DEFAULT_SEED and user.tracked (used by UI/vendor scan)
+-- union of seed + user
 function Addon:GetTrackedUnion()
     ensureDB()
     local u = {}
-    if self.DEFAULT_SEED then
-        for id in pairs(self.DEFAULT_SEED) do u[id] = true end
-    end
+    if self.DEFAULT_SEED then for id in pairs(self.DEFAULT_SEED) do u[id] = true end end
     for id in pairs(CrestXmuteDB.user.tracked) do u[id] = true end
     return u
 end
@@ -44,10 +43,10 @@ end
 function Addon:AddTracked(itemID)
     if not itemID then return false end
     ensureDB()
-    local set = CrestXmuteDB.user.tracked
-    if set[itemID] then return false end
-    set[itemID] = true
+    if CrestXmuteDB.user.tracked[itemID] then return false end
+    CrestXmuteDB.user.tracked[itemID] = true
     CrestXmuteDB.user.toggles[itemID] = CrestXmuteDB.user.toggles[itemID] or { buy = true, open = true, confirm = true }
+    if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) end
     if self.RebuildTrackedCache then self:RebuildTrackedCache() end
     return true
 end
@@ -61,28 +60,48 @@ function Addon:RemoveTracked(itemID)
     return true
 end
 
--- Build vendor entries for *currently open* merchant using the tracked union.
+-- helper: can the index be afforded?
+function Addon:IsAffordable(idx)
+    local cost = { GetMerchantItemCostInfo(idx) or 0 }
+    local costCount = cost[1] or 0
+    if costCount == 0 then return true end
+    for c = 1, costCount do
+        local t, id, qty = GetMerchantItemCostItem(idx, c)
+        if t == "item" then
+            local have = (GetItemCount(id, true) or 0)
+            if have < (qty or 1) then return false end
+        elseif t == "currency" then
+            local info = id and C_CurrencyInfo.GetCurrencyInfo(id)
+            if not info or (info.quantity or 0) < (qty or 1) then return false end
+        end
+    end
+    return true
+end
+
+-- Build entries for the currently-open merchant from tracked union.
 function Addon:CollectTrackedMerchantEntries_All()
     local out, tracked = {}, self:GetTrackedUnion()
-    local n = GetMerchantNumItems()
+    local n = GetMerchantNumItems() or 0
     for idx = 1, n do
         local name, _, _, numAvailable, isUsable = GetMerchantItemInfo(idx)
         local link = GetMerchantItemLink(idx)
         local itemID, icon
         if link then
-            -- safe multi-assign
             local i, _, _, _, _, _, _, _, _, ic = GetItemInfoInstant(link)
             itemID, icon = i, ic
         end
         if itemID and tracked[itemID] then
+            if not icon and C_Item and C_Item.RequestLoadItemDataByID then
+                C_Item.RequestLoadItemDataByID(itemID)
+            end
             table.insert(out, {
                 idx = idx,
                 itemID = itemID,
                 name = name or ("item:" .. itemID),
-                icon = icon,
+                icon = icon or 134400,
                 numAvailable = numAvailable,
                 isUsable = isUsable,
-                affordable = Addon.IsAffordable and Addon:IsAffordable(idx) or true,
+                affordable = self:IsAffordable(idx),
             })
         end
     end
@@ -99,7 +118,5 @@ function Addon:DumpTracked()
         local isSeed = self.DEFAULT_SEED and self.DEFAULT_SEED[id]
         print(("  - %s (%d)%s"):format(name, id, isSeed and "  |cff8888ff[seed]|r" or ""))
     end
-    if not any then
-        print("  (none)")
-    end
+    if not any then print("  (none)") end
 end
