@@ -17,6 +17,23 @@ local function ThrottledRefresh()
     Addon:RefreshList()
 end
 
+local function IsTrackedItemID(itemID)
+    if not itemID then return false end
+    local u = Addon.GetTrackedUnion and Addon:GetTrackedUnion() or {}
+    return u[itemID] and true or false
+end
+
+function Addon:PreloadMerchantItemData()
+    local n = GetMerchantNumItems() or 0
+    for i = 1, n do
+        local link = GetMerchantItemLink(i)
+        local itemID = link and select(1, GetItemInfoInstant(link)) or nil
+        if itemID and C_Item and C_Item.RequestLoadItemDataByID then
+            C_Item.RequestLoadItemDataByID(itemID)
+        end
+    end
+end
+
 -- true if current merchant sells any tracked item (seed + user)
 function Addon:MerchantHasTracked()
     if not MerchantFrame or not MerchantFrame:IsShown() then return false end
@@ -44,6 +61,7 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "MERCHANT_SHOW" then
         -- tiny delay to let item data populate
         C_Timer.After(0.03, function()
+            Addon:PreloadMerchantItemData()
             if Addon:MerchantHasTracked() then
                 Addon:ShowUIForMerchant()
             else
@@ -55,6 +73,7 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
 
     if event == "MERCHANT_UPDATE" then
         -- show/hide depending on tracked availability
+        Addon:PreloadMerchantItemData()
         if Addon:MerchantHasTracked() then
             if not (Addon.Container and Addon.Container:IsShown()) then
                 Addon:ShowUIForMerchant()
@@ -74,7 +93,10 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
 
     if event == "GET_ITEM_INFO_RECEIVED" then
         -- when an icon/name resolves, refresh once
-        ThrottledRefresh()
+        local itemID = arg1
+        if Addon.Container and Addon.Container:IsShown() and IsTrackedItemID(itemID) then
+            ThrottledRefresh()
+        end
         return
     end
 end)
