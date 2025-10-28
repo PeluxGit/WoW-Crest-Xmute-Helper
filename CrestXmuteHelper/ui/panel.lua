@@ -14,6 +14,17 @@ UI.MAX_H                = UI.MAX_H or 560
 UI.COL_W                = UI.COL_W or 22
 UI.COL_SP               = UI.COL_SP or 12
 
+local function RecalcColumns(container)
+    local nameStartX = UI.CONTENT_PAD + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD
+    local available  = (container:GetWidth() or 480)
+        - nameStartX - UI.CONTENT_PAD - 32 -- trailing chrome
+    -- tighten spacing and make columns reliable
+    local buyX       = nameStartX + UI.NAME_COL_W + 24
+    local openX      = buyX + UI.COL_W + UI.COL_SP
+    local confX      = openX + UI.COL_W + UI.COL_SP
+    container._colsX = { buyX, openX, confX }
+end
+
 local function MakeMovable(frame)
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
@@ -150,6 +161,11 @@ function Addon:EnsureUI()
     local title = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
+    RecalcColumns(container)
+    container:SetScript("OnSizeChanged",
+        function(self)
+            RecalcColumns(self); if Addon.RefreshList then Addon:RefreshList() end
+        end)
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     addMode:SetPoint("TOPRIGHT", -10, -6)
