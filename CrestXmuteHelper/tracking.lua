@@ -30,6 +30,20 @@ function Addon:GetTrackedUnion()
     return u
 end
 
+-- unified way to get an icon; requests load and lets UI refresh via GET_ITEM_INFO_RECEIVED
+function Addon:GetItemIcon(itemID)
+    if not itemID then return 134400 end
+    local tex = GetItemIcon and GetItemIcon(itemID)
+    if not tex then
+        local _, _, _, _, _, _, _, _, _, fileID = GetItemInfo(itemID)
+        tex = fileID
+    end
+    if not tex and C_Item and C_Item.RequestLoadItemDataByID then
+        C_Item.RequestLoadItemDataByID(itemID)
+    end
+    return tex or 134400
+end
+
 function Addon:GetItemToggles(itemID)
     ensureDB()
     local t = CrestXmuteDB.user.toggles[itemID]
@@ -62,14 +76,12 @@ end
 
 -- helper: can the index be afforded?
 function Addon:IsAffordable(idx)
-    local cost = { GetMerchantItemCostInfo(idx) or 0 }
-    local costCount = cost[1] or 0
-    if costCount == 0 then return true end
-    for c = 1, costCount do
+    local count = GetMerchantItemCostInfo(idx) or 0
+    if count == 0 then return true end
+    for c = 1, count do
         local t, id, qty = GetMerchantItemCostItem(idx, c)
         if t == "item" then
-            local have = (GetItemCount(id, true) or 0)
-            if have < (qty or 1) then return false end
+            if (GetItemCount(id, true) or 0) < (qty or 1) then return false end
         elseif t == "currency" then
             local info = id and C_CurrencyInfo.GetCurrencyInfo(id)
             if not info or (info.quantity or 0) < (qty or 1) then return false end
@@ -85,20 +97,14 @@ function Addon:CollectTrackedMerchantEntries_All()
     for idx = 1, n do
         local name, _, _, numAvailable, isUsable = GetMerchantItemInfo(idx)
         local link = GetMerchantItemLink(idx)
-        local itemID, icon
-        if link then
-            local i, _, _, _, _, _, _, _, _, ic = GetItemInfoInstant(link)
-            itemID, icon = i, ic
-        end
+        local itemID
+        if link then itemID = select(1, GetItemInfoInstant(link)) end
         if itemID and tracked[itemID] then
-            if not icon and C_Item and C_Item.RequestLoadItemDataByID then
-                C_Item.RequestLoadItemDataByID(itemID)
-            end
             table.insert(out, {
                 idx = idx,
                 itemID = itemID,
                 name = name or ("item:" .. itemID),
-                icon = icon or 134400,
+                icon = Addon:GetItemIcon(itemID),
                 numAvailable = numAvailable,
                 isUsable = isUsable,
                 affordable = self:IsAffordable(idx),
