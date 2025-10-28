@@ -81,6 +81,35 @@ function Addon:TrackedChanged()
     end
 end
 
+local function ComputeTopCandidatesByGroup()
+    local entries = Addon:CollectTrackedMerchantEntries_All()
+    -- Group by primary cost key
+    local perKey = {}
+    for _, e in ipairs(entries) do
+        local key = Addon.GetPrimaryCostKey and Addon:GetPrimaryCostKey(e.idx) or "misc"
+        perKey[key] = perKey[key] or {}
+        table.insert(perKey[key], e)
+    end
+    -- Within each group, sort by rank (then by idx), and pick first (buy=true & affordable)
+    local winners = {}
+    for key, rows in pairs(perKey) do
+        table.sort(rows, function(a, b)
+            local ra = Addon.GetRank and Addon:GetRank(a.itemID) or 9999
+            local rb = Addon.GetRank and Addon:GetRank(b.itemID) or 9999
+            if ra ~= rb then return ra < rb end
+            return a.idx < b.idx
+        end)
+        for _, e in ipairs(rows) do
+            local tog = Addon:GetItemToggles(e.itemID)
+            if tog.buy and e.affordable then
+                winners[e.itemID] = true
+                break
+            end
+        end
+    end
+    return winners
+end
+
 function Addon:RefreshList()
     if not self.Container then return end
     local container, content, scroll = self.Container, self.Container.Content, self.Container.Scroll
@@ -93,7 +122,7 @@ function Addon:RefreshList()
     local flat = BuildGroupedEntries()
     local y = 0
     local rows = {}
-    local topBuyID = Addon.GetTopAffordableSingle and select(1, Addon:GetTopAffordableSingle()) or nil
+    local candidateSet = ComputeTopCandidatesByGroup()
 
     local function makeRow(parent)
         local f = CreateFrame("Frame", nil, parent)
@@ -137,10 +166,14 @@ function Addon:RefreshList()
 
         f:SetScript("OnMouseDown", function(self, btn)
             if btn ~= "LeftButton" then return end
-            local mx = GetCursorPosition(); local s = self:GetEffectiveScale()
-            local left = self:GetLeft() or 0; mx = mx / s
-            local nameEnd = left + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
-            self._allowDrag = (mx <= nameEnd + 2)
+            local cx, cy    = GetCursorPosition()
+            local s         = self:GetEffectiveScale()
+            local left      = self:GetLeft() or 0
+            local mx        = (cx / s) - left
+
+            -- Allow drag anywhere inside [icon .. end of name-column] rectangle.
+            local dragWidth = UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
+            self._allowDrag = (mx >= 0 and mx <= dragWidth)
         end)
 
         f:SetScript("OnDragStart", function(self)
@@ -266,9 +299,9 @@ function Addon:RefreshList()
             end
 
             -- Grey only icon+name when not candidate/affordable
-            local isCandidate = (topBuyID and e.itemID == topBuyID) or false
+            local isCandidate   = candidateSet[e.itemID] and true or false
             local isUnavailable = (not e.affordable) or (not tog.buy)
-            local grey = (not isCandidate) or isUnavailable
+            local grey          = (not isCandidate) or isUnavailable
             if grey then
                 row.icon:SetDesaturated(true); row.name:SetTextColor(0.6, 0.6, 0.6)
             else
@@ -282,31 +315,29 @@ function Addon:RefreshList()
     -- Dynamic height + scrollbar
     local needed = y + 10
     content:SetHeight(needed)
+    content:SetWidth(math.max(1, (scroll:GetWidth() or 1) - 4))
+    scroll:UpdateScrollChildRect() -- <— important so the bar knows real size
 
     local headers = container.HeadersY or 52
     local chrome  = 10
     local totalH  = headers + needed + chrome
-    local finalH  = math.min(UI.MAX_H or 560, math.max(220, totalH)) -- allow taller before scrolling
+    local finalH  = math.min(UI.MAX_H or 560, math.max(220, totalH))
     container:SetHeight(finalH)
 
-    if scroll and scroll.ScrollBar then
-        local viewport = finalH - headers - chrome
+    -- Recompute after container height change
+    scroll:UpdateScrollChildRect()
+    local viewport = (scroll:GetHeight() or 0)
 
-        scroll.ScrollBar:ClearAllPoints()
-        scroll.ScrollBar:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 0, -16)
-        scroll.ScrollBar:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 0, 16)
-
-        local needScroll = needed > (viewport + 0.5)
-        if needScroll then
-            scroll.ScrollBar:Show()
-            scroll:ClearAllPoints()
-            scroll:SetPoint("TOPLEFT", 8, -52)
-            scroll:SetPoint("BOTTOMRIGHT", -28, 40)
-        else
-            scroll.ScrollBar:Hide()
-            scroll:ClearAllPoints()
-            scroll:SetPoint("TOPLEFT", 8, -52)
-            scroll:SetPoint("BOTTOMRIGHT", -8, 40)
-        end
+    local needScroll = (needed > viewport + 0.5)
+    if needScroll then
+        scroll.ScrollBar:Show()
+        scroll:ClearAllPoints()
+        scroll:SetPoint("TOPLEFT", 8, -52)
+        scroll:SetPoint("BOTTOMRIGHT", -28, 40)
+    else
+        scroll.ScrollBar:Hide()
+        scroll:ClearAllPoints()
+        scroll:SetPoint("TOPLEFT", 8, -52)
+        scroll:SetPoint("BOTTOMRIGHT", -8, 40)
     end
 end
