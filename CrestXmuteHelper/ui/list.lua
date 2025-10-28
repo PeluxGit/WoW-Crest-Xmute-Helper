@@ -8,11 +8,11 @@ UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
 UI.LEFT_PAD             = UI.LEFT_PAD or 10
 UI.ICON_W               = UI.ICON_W or 24
 UI.ICON_PAD             = UI.ICON_PAD or 8
-UI.NAME_COL_W           = UI.NAME_COL_W or 228
+UI.NAME_COL_W           = UI.NAME_COL_W or 236
 UI.ROW_H                = UI.ROW_H or 32
-UI.MAX_H                = UI.MAX_H or 460
+UI.MAX_H                = UI.MAX_H or 560
 UI.COL_W                = UI.COL_W or 22
-UI.COL_SP               = UI.COL_SP or 10
+UI.COL_SP               = UI.COL_SP or 12
 
 local function BindItemTooltip(widget, itemID)
     widget:EnableMouse(true)
@@ -123,18 +123,15 @@ function Addon:RefreshList()
         f.open:SetPoint("CENTER", f, "LEFT", relOpenX + UI.COL_W / 2, 0)
         f.conf:SetPoint("CENTER", f, "LEFT", relConfX + UI.COL_W / 2, 0)
 
-        -- Remove (×) just after Confirm column
+        -- Remove (×) after Confirm
         local relRemoveX = relConfX + UI.COL_W + 12
         f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
         f.remove:SetScale(0.6)
         f.remove:SetPoint("CENTER", f, "LEFT", relRemoveX, 0)
         f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
-        f.remove:SetHitRectInsets(2, 2, 2, 2)
 
-        -- Drag (no visual move; compute target by cursor Y on MouseUp)
-        f:RegisterForDrag("LeftButton")
-        f:EnableMouse(true)
-
+        -- Visual drag: row moves while dragging; panel won’t move (scroll has mouse)
+        f:RegisterForDrag("LeftButton"); f:SetMovable(true); f:EnableMouse(true)
         f:SetScript("OnMouseDown", function(self, btn)
             if btn ~= "LeftButton" then return end
             local mx = GetCursorPosition(); local s = self:GetEffectiveScale()
@@ -142,34 +139,33 @@ function Addon:RefreshList()
             local nameEnd = left + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
             self._allowDrag = (mx <= nameEnd + 2)
         end)
+        f:SetScript("OnDragStart", function(self)
+            if not self.itemID or not self._allowDrag then return end
+            self.isDragging = true; self:SetAlpha(0.9); self:StartMoving()
+        end)
+        f:SetScript("OnDragStop", function(self)
+            if not self.isDragging then return end
+            self.isDragging = false; self:StopMovingOrSizing(); self:SetAlpha(1)
 
-        f:SetScript("OnMouseUp", function(self, btn)
-            if btn ~= "LeftButton" or not self._allowDrag then return end
-            local cx, cy = GetCursorPosition()
-            local s = content:GetEffectiveScale()
-            cx, cy = cx / s, cy / s
-            local bestIdx, bestDist = 1, math.huge
-            for i, rf in ipairs(rows) do
-                if rf:IsShown() and rf.itemID then
-                    local midY = (rf:GetTop() + rf:GetBottom()) / 2
-                    local d = math.abs(cy - midY)
-                    if d < bestDist then bestDist, bestIdx = d, i end
+            local myTop = self:GetTop()
+            local siblings = {}
+            for _, rf in ipairs(rows) do
+                if rf ~= self and rf:IsShown() and rf.itemID then table.insert(siblings, rf) end
+            end
+            table.sort(siblings, function(a, b) return (a:GetTop() or 0) > (b:GetTop() or 0) end)
+            local target = #siblings + 1
+            for i, rf in ipairs(siblings) do
+                local top = rf:GetTop() or -math.huge
+                if myTop and top and myTop > top then
+                    target = i; break
                 end
             end
-            -- build new rank order with self.itemID inserted at bestIdx
-            local newOrder, seen = {}, {}
-            table.insert(newOrder, self.itemID); seen[self.itemID] = true
-            local inserted = false
-            local cur = 1
-            for i, rf in ipairs(rows) do
-                if rf.itemID and not seen[rf.itemID] then
-                    if not inserted and cur == bestIdx then
-                        cur = cur + 1
-                    end
-                    table.insert(newOrder, rf.itemID)
-                    cur = cur + 1
-                end
+            local newOrder = {}
+            for i, rf in ipairs(siblings) do
+                if i == target then table.insert(newOrder, self.itemID) end
+                table.insert(newOrder, rf.itemID)
             end
+            if target == #siblings + 1 then table.insert(newOrder, self.itemID) end
             if Addon.SetRankOrder then Addon:SetRankOrder(newOrder) end
             Addon:RefreshList()
             if Addon.SyncOpenMacro then Addon:SyncOpenMacro(false) end
@@ -217,7 +213,7 @@ function Addon:RefreshList()
             local e = node.data
             local row = makeRow(content)
             row:SetPoint("TOPLEFT", UI.CONTENT_PAD, -y); row:SetPoint("RIGHT", -UI.CONTENT_PAD, 0)
-            row.icon:SetTexture(e.icon or 134400)
+            row.icon:SetTexture(Addon:GetItemIcon(e.itemID))
             row.itemID = e.itemID
 
             SetTwoLineTruncate(row.name, e.name or ("item:" .. e.itemID), UI.NAME_COL_W, 2)
@@ -272,7 +268,7 @@ function Addon:RefreshList()
     local headers = container.HeadersY or 52
     local chrome  = 10
     local totalH  = headers + needed + chrome
-    local finalH  = math.min(UI.MAX_H, math.max(180, totalH))
+    local finalH  = math.min(UI.MAX_H, math.max(200, totalH))
     container:SetHeight(finalH)
 
     if scroll and scroll.ScrollBar then
