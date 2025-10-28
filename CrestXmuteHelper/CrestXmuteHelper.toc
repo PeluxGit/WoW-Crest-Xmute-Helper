@@ -15,4 +15,3 @@ ui/list.lua
 events.lua
 macro.lua
 slash.lua
-secure.lua
