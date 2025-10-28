@@ -3,12 +3,12 @@ local ADDON_NAME, Addon = ...
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- Fallback layout constants
+-- Layout
 UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
 UI.LEFT_PAD             = UI.LEFT_PAD or 10
 UI.ICON_W               = UI.ICON_W or 24
 UI.ICON_PAD             = UI.ICON_PAD or 8
-UI.NAME_COL_W           = UI.NAME_COL_W or 220
+UI.NAME_COL_W           = UI.NAME_COL_W or 228
 UI.ROW_H                = UI.ROW_H or 32
 UI.MAX_H                = UI.MAX_H or 460
 UI.COL_W                = UI.COL_W or 22
@@ -43,7 +43,6 @@ local function SetTwoLineTruncate(fs, text, width, maxLines)
     fs:SetText(best ~= "" and best or (s:sub(1, math.max(0, #s - 1)) .. "…"))
 end
 
--- Build grouped entries from tracked union
 local function BuildGroupedEntries()
     local entries = Addon:CollectTrackedMerchantEntries_All()
     local groups = {}
@@ -111,7 +110,7 @@ function Addon:RefreshList()
         f.name:SetWidth(UI.NAME_COL_W)
         f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(true)
 
-        -- Checkbox columns (use same math as headers)
+        -- Checkbox columns
         local relBuyX  = colsX[1] - UI.CONTENT_PAD
         local relOpenX = colsX[2] - UI.CONTENT_PAD
         local relConfX = colsX[3] - UI.CONTENT_PAD
@@ -125,15 +124,17 @@ function Addon:RefreshList()
         f.conf:SetPoint("CENTER", f, "LEFT", relConfX + UI.COL_W / 2, 0)
 
         -- Remove (×) just after Confirm column
-        local relRemoveX = relConfX + UI.COL_W + 10
+        local relRemoveX = relConfX + UI.COL_W + 12
         f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
         f.remove:SetScale(0.6)
         f.remove:SetPoint("CENTER", f, "LEFT", relRemoveX, 0)
         f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
         f.remove:SetHitRectInsets(2, 2, 2, 2)
 
-        -- Drag only when mouse down in icon+name region
-        f:RegisterForDrag("LeftButton"); f:SetMovable(true); f:EnableMouse(true)
+        -- Drag (no visual move; compute target by cursor Y on MouseUp)
+        f:RegisterForDrag("LeftButton")
+        f:EnableMouse(true)
+
         f:SetScript("OnMouseDown", function(self, btn)
             if btn ~= "LeftButton" then return end
             local mx = GetCursorPosition(); local s = self:GetEffectiveScale()
@@ -141,32 +142,34 @@ function Addon:RefreshList()
             local nameEnd = left + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
             self._allowDrag = (mx <= nameEnd + 2)
         end)
-        f:SetScript("OnDragStart", function(self)
-            if not self.itemID or not self._allowDrag then return end
-            self.isDragging = true; self:SetAlpha(0.9); self:StartMoving()
-        end)
-        f:SetScript("OnDragStop", function(self)
-            if not self.isDragging then return end
-            self.isDragging = false; self:StopMovingOrSizing(); self:SetAlpha(1)
-            local myTop = self:GetTop()
-            local siblings = {}
-            for _, rf in ipairs(rows) do
-                if rf ~= self and rf:IsShown() and rf.itemID then table.insert(siblings, rf) end
-            end
-            table.sort(siblings, function(a, b) return (a:GetTop() or 0) > (b:GetTop() or 0) end)
-            local target = #siblings + 1
-            for i, rf in ipairs(siblings) do
-                local top = rf:GetTop() or -math.huge
-                if myTop and top and myTop > top then
-                    target = i; break
+
+        f:SetScript("OnMouseUp", function(self, btn)
+            if btn ~= "LeftButton" or not self._allowDrag then return end
+            local cx, cy = GetCursorPosition()
+            local s = content:GetEffectiveScale()
+            cx, cy = cx / s, cy / s
+            local bestIdx, bestDist = 1, math.huge
+            for i, rf in ipairs(rows) do
+                if rf:IsShown() and rf.itemID then
+                    local midY = (rf:GetTop() + rf:GetBottom()) / 2
+                    local d = math.abs(cy - midY)
+                    if d < bestDist then bestDist, bestIdx = d, i end
                 end
             end
-            local newOrder = {}
-            for i, rf in ipairs(siblings) do
-                if i == target then table.insert(newOrder, self.itemID) end
-                table.insert(newOrder, rf.itemID)
+            -- build new rank order with self.itemID inserted at bestIdx
+            local newOrder, seen = {}, {}
+            table.insert(newOrder, self.itemID); seen[self.itemID] = true
+            local inserted = false
+            local cur = 1
+            for i, rf in ipairs(rows) do
+                if rf.itemID and not seen[rf.itemID] then
+                    if not inserted and cur == bestIdx then
+                        cur = cur + 1
+                    end
+                    table.insert(newOrder, rf.itemID)
+                    cur = cur + 1
+                end
             end
-            if target == #siblings + 1 then table.insert(newOrder, self.itemID) end
             if Addon.SetRankOrder then Addon:SetRankOrder(newOrder) end
             Addon:RefreshList()
             if Addon.SyncOpenMacro then Addon:SyncOpenMacro(false) end
@@ -180,7 +183,7 @@ function Addon:RefreshList()
         content:SetHeight(40); container:SetHeight(math.min(UI.MAX_H, 110))
         if scroll and scroll.ScrollBar then
             scroll.ScrollBar:Hide()
-            scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", 8, -52); scroll:SetPoint("BOTTOMRIGHT", -8, 10)
+            scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", 8, -52); scroll:SetPoint("BOTTOMRIGHT", -8, 40)
         end
         return
     else
@@ -236,26 +239,12 @@ function Addon:RefreshList()
                 if Addon.SyncOpenMacro then Addon:SyncOpenMacro(false) end
             end)
 
-            -- Remove (×) action (blocked for seed)
             local isSeed = Addon.IsSeedItem and Addon:IsSeedItem(e.itemID)
             if isSeed then
                 row.remove:Disable(); row.remove:SetAlpha(0.35)
                 row.remove:SetScript("OnClick", nil)
-                row.remove:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:AddLine("Default seasonal item", 1, 1, 1)
-                    GameTooltip:AddLine("Cannot remove from seed.", 0.9, 0.9, 0.9)
-                    GameTooltip:Show()
-                end)
-                row.remove:SetScript("OnLeave", function() GameTooltip:Hide() end)
             else
                 row.remove:Enable(); row.remove:SetAlpha(1)
-                row.remove:SetScript("OnEnter", function(self)
-                    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                    GameTooltip:AddLine("Remove from tracked", 1, 1, 1)
-                    GameTooltip:Show()
-                end)
-                row.remove:SetScript("OnLeave", function() GameTooltip:Hide() end)
                 row.remove:SetScript("OnClick", function()
                     if Addon.RemoveTracked and Addon:RemoveTracked(e.itemID) then
                         Addon:TrackedChanged()
@@ -263,7 +252,7 @@ function Addon:RefreshList()
                 end)
             end
 
-            -- Grey only icon+name when not candidate or not affordable / buy off
+            -- Grey only icon+name when not candidate/affordable
             local isCandidate = (topBuyID and e.itemID == topBuyID) or false
             local isUnavailable = (not e.affordable) or (not tog.buy)
             local grey = (not isCandidate) or isUnavailable
@@ -277,7 +266,7 @@ function Addon:RefreshList()
         end
     end
 
-    -- Dynamic height + scrollbar (always inside the panel)
+    -- Dynamic height + scrollbar
     local needed = y + 10
     content:SetHeight(needed)
     local headers = container.HeadersY or 52
