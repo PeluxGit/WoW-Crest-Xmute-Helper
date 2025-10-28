@@ -98,6 +98,8 @@ function Addon:RefreshList()
     local function makeRow(parent)
         local f = CreateFrame("Frame", nil, parent)
         f:SetSize(1, UI.ROW_H)
+        f:SetMovable(true)
+        f:SetClampedToScreen(true)
 
         -- Icon
         f.icon = f:CreateTexture(nil, "ARTWORK")
@@ -130,8 +132,9 @@ function Addon:RefreshList()
         f.remove:SetPoint("CENTER", f, "LEFT", relRemoveX, 0)
         f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
 
-        -- Visual drag: row moves while dragging; panel won’t move (scroll has mouse)
-        f:RegisterForDrag("LeftButton"); f:SetMovable(true); f:EnableMouse(true)
+        -- Visual drag with safe start/stop
+        f:RegisterForDrag("LeftButton"); f:EnableMouse(true)
+
         f:SetScript("OnMouseDown", function(self, btn)
             if btn ~= "LeftButton" then return end
             local mx = GetCursorPosition(); local s = self:GetEffectiveScale()
@@ -139,37 +142,51 @@ function Addon:RefreshList()
             local nameEnd = left + UI.LEFT_PAD + UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W
             self._allowDrag = (mx <= nameEnd + 2)
         end)
+
         f:SetScript("OnDragStart", function(self)
             if not self.itemID or not self._allowDrag then return end
-            self.isDragging = true; self:SetAlpha(0.9); self:StartMoving()
+            self.isDragging = true
+            self:SetAlpha(0.9)
+            self:StartMoving()
         end)
+
         f:SetScript("OnDragStop", function(self)
             if not self.isDragging then return end
-            self.isDragging = false; self:StopMovingOrSizing(); self:SetAlpha(1)
+            self.isDragging = false
+            self:StopMovingOrSizing()
+            self:SetAlpha(1)
 
-            local myTop = self:GetTop()
+            local myMid = (self:GetTop() + self:GetBottom()) / 2
             local siblings = {}
             for _, rf in ipairs(rows) do
-                if rf ~= self and rf:IsShown() and rf.itemID then table.insert(siblings, rf) end
+                if rf ~= self and rf:IsShown() and rf.itemID then
+                    siblings[#siblings + 1] = rf
+                end
             end
             table.sort(siblings, function(a, b) return (a:GetTop() or 0) > (b:GetTop() or 0) end)
+
             local target = #siblings + 1
             for i, rf in ipairs(siblings) do
-                local top = rf:GetTop() or -math.huge
-                if myTop and top and myTop > top then
+                local mid = (rf:GetTop() + rf:GetBottom()) / 2
+                if myMid > mid then
                     target = i; break
                 end
             end
+
             local newOrder = {}
             for i, rf in ipairs(siblings) do
                 if i == target then table.insert(newOrder, self.itemID) end
                 table.insert(newOrder, rf.itemID)
             end
             if target == #siblings + 1 then table.insert(newOrder, self.itemID) end
+
             if Addon.SetRankOrder then Addon:SetRankOrder(newOrder) end
             Addon:RefreshList()
             if Addon.SyncOpenMacro then Addon:SyncOpenMacro(false) end
         end)
+
+        -- prevent dragging the whole panel when over the list
+        f:SetScript("OnMouseUp", function(self) self._allowDrag = false end)
 
         return f
     end
@@ -265,19 +282,22 @@ function Addon:RefreshList()
     -- Dynamic height + scrollbar
     local needed = y + 10
     content:SetHeight(needed)
+
     local headers = container.HeadersY or 52
     local chrome  = 10
     local totalH  = headers + needed + chrome
-    local finalH  = math.min(UI.MAX_H, math.max(200, totalH))
+    local finalH  = math.min(UI.MAX_H or 560, math.max(220, totalH)) -- allow taller before scrolling
     container:SetHeight(finalH)
 
     if scroll and scroll.ScrollBar then
         local viewport = finalH - headers - chrome
+
         scroll.ScrollBar:ClearAllPoints()
         scroll.ScrollBar:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 0, -16)
         scroll.ScrollBar:SetPoint("BOTTOMRIGHT", scroll, "BOTTOMRIGHT", 0, 16)
 
-        if needed > viewport + 0.5 then
+        local needScroll = needed > (viewport + 0.5)
+        if needScroll then
             scroll.ScrollBar:Show()
             scroll:ClearAllPoints()
             scroll:SetPoint("TOPLEFT", 8, -52)
