@@ -1,6 +1,9 @@
+-- bags.lua
+-- Helpers for scanning the player's bags for tracked items
 local ADDON_NAME, Addon = ...
 
 -- Count tracked items present in bags (all stacks)
+-- Returns the total quantity across all stacks for items that are both tracked and allowed
 function Addon:CountTrackedInBagsSelected()
     local total = 0
     for bag = 0, NUM_BAG_SLOTS do
@@ -17,6 +20,7 @@ function Addon:CountTrackedInBagsSelected()
 end
 
 -- Return distinct tracked+enabled IDs present in bags (dedup by ID), unsorted
+-- limit: stops after collecting up to this many distinct IDs (default 30)
 function Addon:CollectTrackedIDsInBags(limit)
     limit = limit or 30
     local seen, ids = {}, {}
@@ -27,7 +31,7 @@ function Addon:CollectTrackedIDsInBags(limit)
             if id and not seen[id] and self:IsTracked(id) and self:IsAllowed(id) then
                 local tog = self:GetItemToggles(id)
                 if tog.open then
-                    ids[#ids+1] = id
+                    ids[#ids + 1] = id
                     seen[id] = true
                     if #ids >= limit then return ids end
                 end

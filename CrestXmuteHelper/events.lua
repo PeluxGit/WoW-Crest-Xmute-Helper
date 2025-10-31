@@ -1,3 +1,5 @@
+-- events.lua
+-- Central event hub for showing/hiding UI and refreshing data
 local ADDON_NAME, Addon = ...
 
 local f = CreateFrame("Frame")
@@ -6,6 +8,7 @@ f:RegisterEvent("MERCHANT_SHOW")
 f:RegisterEvent("MERCHANT_UPDATE")
 f:RegisterEvent("MERCHANT_CLOSED")
 f:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+f:RegisterEvent("BAG_UPDATE_DELAYED")
 
 -- simple throttle so we don't spam refreshes
 local nextRefreshAt = 0
@@ -23,6 +26,7 @@ local function IsTrackedItemID(itemID)
     return u[itemID] and true or false
 end
 
+-- Request item data for all visible merchant entries to avoid nil icons/names
 function Addon:PreloadMerchantItemData()
     local n = GetMerchantNumItems() or 0
     for i = 1, n do
@@ -51,6 +55,7 @@ function Addon:MerchantHasTracked()
     return false
 end
 
+-- Main event dispatch: controls when UI appears and when we refresh
 f:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
         if Addon.Init then Addon:Init() end
@@ -59,7 +64,7 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
     end
 
     if event == "MERCHANT_SHOW" then
-        -- tiny delay to let item data populate
+        -- Small delay (30ms) to let item data populate from server before scanning
         C_Timer.After(0.03, function()
             Addon:PreloadMerchantItemData()
             if Addon:MerchantHasTracked() then
@@ -80,6 +85,10 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
                 return
             end
             ThrottledRefresh()
+            -- Sync macro after merchant update (e.g., after buying an item)
+            if Addon.SyncOpenMacro then
+                Addon:SyncOpenMacro(true)
+            end
         else
             Addon:HideUI()
         end
@@ -95,6 +104,20 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
         -- when an icon/name resolves, refresh once
         local itemID = arg1
         if Addon.Container and Addon.Container:IsShown() and IsTrackedItemID(itemID) then
+            ThrottledRefresh()
+        end
+        return
+    end
+
+    if event == "BAG_UPDATE_DELAYED" then
+        -- Bag contents changed (items added/removed/used)
+        -- Only sync macro and refresh UI if window is open
+        if Addon.Container and Addon.Container:IsShown() then
+            -- Sync macro to reflect current bag state
+            if Addon.SyncOpenMacro then
+                Addon:SyncOpenMacro(true)
+            end
+            -- Refresh the UI to update affordability/counts
             ThrottledRefresh()
         end
         return

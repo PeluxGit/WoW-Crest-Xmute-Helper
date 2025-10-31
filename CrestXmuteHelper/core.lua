@@ -1,8 +1,27 @@
+-- core.lua
+-- Core addon namespace, DB schema, defaults, and shared helpers
 local ADDON_NAME, Addon = ...
-if not Addon then Addon = {}; _G[ADDON_NAME] = Addon end
+if not Addon then
+    Addon = {}; _G[ADDON_NAME] = Addon
+end
 
 -- SavedVariables
 CrestXmuteDB = CrestXmuteDB or {}
+
+-- Debug logging toggle (default off for release). Use /cxh debug on|off|toggle|status.
+Addon.DEBUG = false
+
+-- Enable/disable debug logging at runtime
+function Addon:SetDebug(enabled)
+    self.DEBUG = enabled and true or false
+    local state = self.DEBUG and "enabled" or "disabled"
+    print("|cffffd200CrestXmute: Debug " .. state .. "|r")
+end
+
+-- Query current debug state
+function Addon:IsDebug()
+    return self.DEBUG == true
+end
 
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
@@ -12,44 +31,45 @@ Addon.DEFAULT_SEED = {
     [240929] = true, -- Example: Drake’s Crest Pack
 }
 
--- Defaults + schema
+-- Defaults + schema (all user data under .user)
 function Addon:EnsureDB()
-    local db = CrestXmuteDB
-    db.items = db.items or {}           -- user tracked set [itemID]=true
-    db.selected = db.selected or {}     -- per-item enable (nil/true=enabled, false=disabled)
-    db.row = db.row or {}               -- row order: [itemID]=rank (lower = higher)
-    db.toggles = db.toggles or {}       -- per-item toggles: [itemID] = {buy=true, open=true, confirm=true}
-    db.buyMode = db.buyMode or "one"    -- "one" or "all"
-    if db.autoConfirm == nil then db.autoConfirm = true end
-    if db.openEnabled == nil then db.openEnabled = true end
-    db.framePos = db.framePos or nil
+    CrestXmuteDB.user = CrestXmuteDB.user or {}
+    local u = CrestXmuteDB.user
+    u.tracked = u.tracked or {}   -- user tracked set [itemID]=true
+    u.selected = u.selected or {} -- per-item enable (nil/true=enabled, false=disabled)
+    u.row = u.row or {}           -- row order: [itemID]=rank (lower = higher)
+    u.toggles = u.toggles or {}   -- per-item toggles: [itemID] = {buy=true, open=true, confirm=true}
+
+    -- Settings
+    CrestXmuteDB.framePos = CrestXmuteDB.framePos or nil -- window position
 end
 
 function Addon:IsSeeded(id) return self.DEFAULT_SEED[id] == true end
-function Addon:IsUser(id)   return CrestXmuteDB.items[id] == true end
+
+function Addon:IsUser(id) return CrestXmuteDB.user.tracked[id] == true end
 
 -- Tracked if seeded or user-added
 function Addon:IsTracked(id) return id and (self:IsSeeded(id) or self:IsUser(id)) or false end
 
 -- Enabled if not explicitly disabled
 function Addon:IsAllowed(id)
-    local v = CrestXmuteDB.selected[id]
+    local v = CrestXmuteDB.user.selected[id]
     return (v == nil) or (v == true)
 end
 
 -- Get per-item toggles with defaults
 function Addon:GetItemToggles(id)
-    local t = CrestXmuteDB.toggles[id]
+    local t = CrestXmuteDB.user.toggles[id]
     if not t then
         t = { buy = true, open = true, confirm = true }
-        CrestXmuteDB.toggles[id] = t
+        CrestXmuteDB.user.toggles[id] = t
     end
     return t
 end
 
 -- Priority rank: lower value = higher priority. Default large to push to bottom.
 function Addon:GetRank(id)
-    local r = CrestXmuteDB.row[id]
+    local r = CrestXmuteDB.user.row[id]
     return (r ~= nil) and r or 1e9
 end
 
@@ -57,7 +77,7 @@ end
 function Addon:SetRankOrder(orderList)
     -- orderList: array of itemIDs in desired top->bottom order
     for i, id in ipairs(orderList) do
-        CrestXmuteDB.row[id] = i
+        CrestXmuteDB.user.row[id] = i
     end
 end
 

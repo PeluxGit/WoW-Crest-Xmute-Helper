@@ -1,20 +1,11 @@
 -- ui/list.lua
+-- Renders tracked item rows with icons, toggles, and controls; handles scroll layout and row interactions
 local ADDON_NAME, Addon = ...
 
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- Layout
-UI.CONTENT_PAD          = UI.CONTENT_PAD or 8
-UI.LEFT_PAD             = UI.LEFT_PAD or 10
-UI.ICON_W               = UI.ICON_W or 24
-UI.ICON_PAD             = UI.ICON_PAD or 8
-UI.NAME_COL_W           = UI.NAME_COL_W or 236
-UI.ROW_H                = UI.ROW_H or 32
-UI.MAX_H                = UI.MAX_H or 560
-UI.COL_W                = UI.COL_W or 22
-UI.COL_SP               = UI.COL_SP or 12
-
+-- Bind item tooltip to widget on hover (local helper, only used in this file)
 local function BindItemTooltip(widget, itemID)
     widget:EnableMouse(true)
     widget:SetScript("OnEnter", function(self)
@@ -26,46 +17,31 @@ local function BindItemTooltip(widget, itemID)
     widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
--- 2-line truncate helper
-local function SetTwoLineTruncate(fs, text, width, maxLines)
-    maxLines = maxLines or 2
-    fs:SetWidth(width); fs:SetWordWrap(true); fs:SetText(text or "")
-    local _, fh = fs:GetFont(); local maxH = (fh or 12) * maxLines + 2
-    if fs:GetStringHeight() <= maxH then return end
-    local s = text or ""; local lo, hi, best = 1, #s, ""
-    while lo <= hi do
-        local mid = math.floor((lo + hi) / 2)
-        fs:SetText(s:sub(1, mid) .. "…")
-        if fs:GetStringHeight() <= maxH and fs:GetStringWidth() <= width * 1.02 then
-            best = s:sub(1, mid) .. "…"; lo = mid + 1
-        else
-            hi = mid - 1
-        end
-    end
-    fs:SetText(best ~= "" and best or (s:sub(1, math.max(0, #s - 1)) .. "…"))
-end
-
--- Pick the top candidate per currency key (priority+affordable+buy=true)
+-- Pick the top candidate per currency key (highest priority + affordable + buy enabled)
+-- Used to highlight which items will actually be purchased by the macro
 local function ComputeTopCandidatesByGroup()
     local entries = Addon:CollectTrackedMerchantEntries_All()
-    local perKey = {}
-    for _, e in ipairs(entries) do
-        local key = Addon.GetPrimaryCostKey and Addon:GetPrimaryCostKey(e.idx) or "misc"
-        perKey[key] = perKey[key] or {}
-        table.insert(perKey[key], e)
+    local groupsByKey = {}
+    for _, entry in ipairs(entries) do
+        local costKey = "misc"
+        if Addon.GetPrimaryCostKey then
+            costKey = Addon:GetPrimaryCostKey(entry.idx) or "misc"
+        end
+        groupsByKey[costKey] = groupsByKey[costKey] or {}
+        table.insert(groupsByKey[costKey], entry)
     end
     local winners = {}
-    for key, rows in pairs(perKey) do
+    for costKey, rows in pairs(groupsByKey) do
         table.sort(rows, function(a, b)
-            local ra = Addon.GetRank and Addon:GetRank(a.itemID) or 9999
-            local rb = Addon.GetRank and Addon:GetRank(b.itemID) or 9999
-            if ra ~= rb then return ra < rb end
+            local rankA = Addon.GetRank and Addon:GetRank(a.itemID) or 9999
+            local rankB = Addon.GetRank and Addon:GetRank(b.itemID) or 9999
+            if rankA ~= rankB then return rankA < rankB end
             return a.idx < b.idx
         end)
-        for _, e in ipairs(rows) do
-            local tog = Addon:GetItemToggles(e.itemID)
-            if tog.buy and e.affordable then
-                winners[e.itemID] = true
+        for _, entry in ipairs(rows) do
+            local toggles = Addon:GetItemToggles(entry.itemID)
+            if toggles.buy and entry.affordable then
+                winners[entry.itemID] = true
                 break
             end
         end
@@ -73,33 +49,38 @@ local function ComputeTopCandidatesByGroup()
     return winners
 end
 
+-- Build a flat list of header+row nodes grouped by currency/item cost
 local function BuildGroupedEntries()
     local entries = Addon:CollectTrackedMerchantEntries_All()
     local groups = {}
-    for _, e in ipairs(entries) do
-        local key = Addon.GetPrimaryCostKey and Addon:GetPrimaryCostKey(e.idx) or "misc"
-        local gk = key or "misc"
-        groups[gk] = groups[gk] or { header = gk, rows = {} }
-        table.insert(groups[gk].rows, e)
+    for _, entry in ipairs(entries) do
+        local costKey = "misc"
+        if Addon.GetPrimaryCostKey then
+            costKey = Addon:GetPrimaryCostKey(entry.idx) or "misc"
+        end
+        groups[costKey] = groups[costKey] or { header = costKey, rows = {} }
+        table.insert(groups[costKey].rows, entry)
     end
-    for _, g in pairs(groups) do
-        table.sort(g.rows, function(a, b)
-            local ra = Addon.GetRank and Addon:GetRank(a.itemID) or 9999
-            local rb = Addon.GetRank and Addon:GetRank(b.itemID) or 9999
-            if ra ~= rb then return ra < rb end
+    for _, group in pairs(groups) do
+        table.sort(group.rows, function(a, b)
+            local rankA = Addon.GetRank and Addon:GetRank(a.itemID) or 9999
+            local rankB = Addon.GetRank and Addon:GetRank(b.itemID) or 9999
+            if rankA ~= rankB then return rankA < rankB end
             return a.idx < b.idx
         end)
     end
-    local orderKeys, flat = {}, {}
-    for k in pairs(groups) do orderKeys[#orderKeys + 1] = k end
-    table.sort(orderKeys)
-    for _, k in ipairs(orderKeys) do
-        flat[#flat + 1] = { kind = "header", key = k }
-        for _, row in ipairs(groups[k].rows) do
-            flat[#flat + 1] = { kind = "row", data = row }
+    local orderedKeys, flatList = {}, {}
+    for key in pairs(groups) do
+        orderedKeys[#orderedKeys + 1] = key
+    end
+    table.sort(orderedKeys)
+    for _, key in ipairs(orderedKeys) do
+        flatList[#flatList + 1] = { kind = "header", key = key }
+        for _, row in ipairs(groups[key].rows) do
+            flatList[#flatList + 1] = { kind = "row", data = row }
         end
     end
-    return flat
+    return flatList
 end
 
 local function Wipe(t) for k in pairs(t) do t[k] = nil end end
@@ -112,11 +93,12 @@ function Addon:TrackedChanged()
 end
 
 function Addon:RefreshList()
-    if not self.Container then return end
+    if not self.Container or not self.Container:IsVisible() then return end
     local container, content, scroll = self.Container, self.Container.Content, self.Container.Scroll
-    local colsX = container._colsX
 
-    content.cells = content.cells or {}
+    -- (width handled after scrollbar visibility is determined)
+
+    content.cells                    = content.cells or {}
     for _, f in ipairs(content.cells) do if f.Hide then f:Hide() end end
     Wipe(content.cells)
 
@@ -124,60 +106,110 @@ function Addon:RefreshList()
     local y = 0
     local rows = {}
     local candidateSet = ComputeTopCandidatesByGroup()
+    local rowDebugCount = 0 -- Counter for debug logging
 
     local function makeRow(parent, yTop)
+        rowDebugCount = rowDebugCount + 1
+        -- Rows anchor to both edges of content and follow its width (content width accounts for scrollbar reserve)
         local f = CreateFrame("Frame", nil, parent)
-        f:SetSize(1, UI.ROW_H)
-        f:SetPoint("TOPLEFT", UI.CONTENT_PAD, -yTop)
-        f:SetPoint("RIGHT", -UI.CONTENT_PAD, 0)
+        f:SetHeight(UI.ROW_H)
+        f:SetPoint("TOPLEFT", 0, -yTop)
+        f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -yTop)
         f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
 
-        -- Icon
+        -- Icon (at the far left)
         f.icon = f:CreateTexture(nil, "ARTWORK")
         f.icon:SetSize(UI.ICON_W, UI.ICON_W)
         f.icon:SetPoint("LEFT", UI.LEFT_PAD, 0)
 
-        -- Name
+        -- Name (to the right of icon, fixed width)
         f.name = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         f.name:SetPoint("LEFT", f.icon, "RIGHT", UI.ICON_PAD, 0)
         f.name:SetWidth(UI.NAME_COL_W)
-        f.name:SetJustifyH("LEFT"); f.name:SetWordWrap(true)
+        f.name:SetJustifyH("LEFT")
+        f.name:SetWordWrap(true)
 
-        -- Transparent drag zone covering icon + name rectangle (easy drag)
+        -- Create checkboxes - anchor each to the previous element, just like icon→name
+        local CHECKBOX_SCALE = UI.CHECKBOX_SCALE or 0.7
+        f.buy = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+        f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+        f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+
+        f.buy:SetScale(CHECKBOX_SCALE)
+        f.open:SetScale(CHECKBOX_SCALE)
+        f.conf:SetScale(CHECKBOX_SCALE)
+
+        -- Programmatic, scale-aware X positions derived from header centers.
+        -- Convert header centers to content/row space, then optionally apply scale correction and bias.
+        local contentLeft   = (content and content.GetLeft and content:GetLeft()) or 0
+        local containerLeft = (container and container.GetLeft and container:GetLeft()) or 0
+        local buyCX         = container._hdrBuy and select(1, container._hdrBuy:GetCenter()) or nil
+        local openCX        = container._hdrOpen and select(1, container._hdrOpen:GetCenter()) or nil
+        local confCX        = container._hdrConf and select(1, container._hdrConf:GetCenter()) or nil
+        local baseBuyX      = buyCX and (buyCX - contentLeft) or nil
+        local baseOpenX     = openCX and (openCX - contentLeft) or nil
+        local baseConfX     = confCX and (confCX - contentLeft) or nil
+        local centers       = container and container._colCenters
+        local baseRemX      = centers and ((centers[4] + containerLeft) - contentLeft) or nil
+
+        local childScale    = f.buy:GetScale() or 1
+        -- Always apply a scale-aware correction so visual spacing remains consistent
+        local scaleCorr     = 1 / (childScale ~= 0 and childScale or 1)
+
+        local function applyCheckbox(x)
+            return x and (scaleCorr * x) or nil
+        end
+
+        -- Checkboxes: scale-aware; Remove: derive from Confirm delta, also scale-aware
+        local X_BUY    = applyCheckbox(baseBuyX) or (UI.X_BUY or 460)
+        local X_OPEN   = applyCheckbox(baseOpenX) or (UI.X_OPEN or 530)
+        local X_CONF   = applyCheckbox(baseConfX) or (UI.X_CONF or 600)
+
+        -- Remove: scale-aware + shift left by scrollbar reserve to stay visible when scrollbar appears
+        local X_REMOVE = applyCheckbox(baseRemX) or (UI.X_REMOVE or 765)
+        X_REMOVE       = X_REMOVE - (UI.SCROLLBAR_RESERVE or 24)
+
+        if Addon and Addon.DEBUG and rowDebugCount == 1 then
+            print(string.format(
+                "[X-FORMULA] (always scale-aware) childScale=%.3f, scaleCorr=%.3f, base(b/o/c/r)=%.1f/%.1f/%.1f/%.1f -> X=%.1f/%.1f/%.1f/%.1f",
+                childScale, scaleCorr, baseBuyX or -1, baseOpenX or -1, baseConfX or -1,
+                (centers and ((centers[4] + containerLeft) - contentLeft)) or -1,
+                X_BUY, X_OPEN, X_CONF, X_REMOVE))
+        end
+
+        f.buy:SetPoint("CENTER", f, "LEFT", X_BUY, 0)
+        f.open:SetPoint("CENTER", f, "LEFT", X_OPEN, 0)
+        f.conf:SetPoint("CENTER", f, "LEFT", X_CONF, 0)
+
+        -- Remove button
+        f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
+        f.remove:SetScale(UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+        f.remove:SetPoint("CENTER", f, "LEFT", X_REMOVE, 0)
+        f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
+
+        -- Transparent drag zone (only covers icon + name area)
         f.dragZone = CreateFrame("Frame", nil, f)
         f.dragZone:SetPoint("LEFT", UI.LEFT_PAD, 0)
         f.dragZone:SetSize(UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W, UI.ROW_H)
         f.dragZone:EnableMouse(true)
-        f.dragZone:RegisterForDrag("LeftButton")
 
-        -- Checkbox columns (absolute Xs turned into row-local offsets)
-        local relBuyX  = colsX[1] - UI.CONTENT_PAD
-        local relOpenX = colsX[2] - UI.CONTENT_PAD
-        local relConfX = colsX[3] - UI.CONTENT_PAD
+        -- Bind tooltip to dragZone so it shows when mousing over the drag area
+        -- (tooltip will be set later when itemID is assigned to the row)
+        f.dragZone.itemID = nil -- Will be set when row is populated
 
-        f.buy          = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate"); f.buy:SetScale(0.7)
-        f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate"); f.open:SetScale(0.7)
-        f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate"); f.conf:SetScale(0.7)
-
-        f.buy:SetPoint("CENTER", f, "LEFT", relBuyX + UI.COL_W / 2, 0)
-        f.open:SetPoint("CENTER", f, "LEFT", relOpenX + UI.COL_W / 2, 0)
-        f.conf:SetPoint("CENTER", f, "LEFT", relConfX + UI.COL_W / 2, 0)
-
-        -- Remove (×) just to the right of Confirm
-        local relRemoveX = relConfX + UI.COL_W + 14
-        f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
-        f.remove:SetScale(0.6)
-        f.remove:SetPoint("CENTER", f, "LEFT", relRemoveX, 0)
-        f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
-
-        -- Drag behavior via dragZone (so full icon+name area starts drags)
-        f.dragZone:SetScript("OnDragStart", function()
-            if not f.itemID then return end
-            f.isDragging = true; f:SetAlpha(0.9); f:StartMoving()
+        -- Use OnMouseDown/Up for immediate drag response (no threshold delay)
+        f.dragZone:SetScript("OnMouseDown", function(self, button)
+            if button ~= "LeftButton" or not f.itemID then return end
+            f.isDragging = true
+            f:SetAlpha(0.9)
+            f:StartMoving()
         end)
-        f.dragZone:SetScript("OnDragStop", function()
-            if not f.isDragging then return end
-            f.isDragging = false; f:StopMovingOrSizing(); f:SetAlpha(1)
+
+        f.dragZone:SetScript("OnMouseUp", function(self, button)
+            if button ~= "LeftButton" or not f.isDragging then return end
+            f.isDragging = false
+            f:StopMovingOrSizing()
+            f:SetAlpha(1)
 
             local myMid = (f:GetTop() + f:GetBottom()) / 2
             local siblings = {}
@@ -226,7 +258,7 @@ function Addon:RefreshList()
     for _, node in ipairs(flat) do
         if node.kind == "header" then
             local h = CreateFrame("Frame", nil, content)
-            h:SetSize(1, UI.ROW_H - 6); h:SetPoint("TOPLEFT", UI.CONTENT_PAD, -y)
+            h:SetSize(1, UI.ROW_H - 6); h:SetPoint("TOPLEFT", 0, -y) -- Anchor at content edge
             local fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             fs:SetPoint("LEFT", UI.LEFT_PAD, 0)
             local key, text = node.key, nil
@@ -234,7 +266,7 @@ function Addon:RefreshList()
                 local curID = tonumber(key:match("currency:(%d+)"))
                 local info = curID and C_CurrencyInfo.GetCurrencyInfo(curID)
                 text = (info and info.name or ("currency:" .. (curID or ""))) ..
-                (info and ("  (" .. info.quantity .. ")") or "")
+                    (info and ("  (" .. info.quantity .. ")") or "")
             elseif key:find("^item:") then
                 local itemID = tonumber(key:match("item:(%d+)"))
                 local name = GetItemInfo(itemID) or ("item:" .. (itemID or 0))
@@ -251,8 +283,11 @@ function Addon:RefreshList()
             local row = makeRow(content, y)
             row.itemID = e.itemID
             row.icon:SetTexture(Addon:GetItemIcon(e.itemID))
-            SetTwoLineTruncate(row.name, e.name or ("item:" .. e.itemID), UI.NAME_COL_W, 2)
+            UI.SetTwoLineTruncate(row.name, e.name or ("item:" .. e.itemID), UI.NAME_COL_W, 2)
             BindItemTooltip(row, e.itemID); BindItemTooltip(row.name, e.itemID)
+
+            -- Also bind tooltip to dragZone so it shows when mousing over the drag area
+            BindItemTooltip(row.dragZone, e.itemID)
 
             local tog = Addon:GetItemToggles(e.itemID)
             row.buy:SetChecked(tog.buy); row.open:SetChecked(tog.open); row.conf:SetChecked(tog.confirm)
@@ -279,6 +314,8 @@ function Addon:RefreshList()
                 row.remove:Enable(); row.remove:SetAlpha(1)
                 row.remove:SetScript("OnClick", function()
                     if Addon.RemoveTracked and Addon:RemoveTracked(e.itemID) then
+                        local name = GetItemInfo(e.itemID) or ("item:" .. e.itemID)
+                        UIErrorsFrame:AddMessage("|cffff9900CrestXmute: Removed|r " .. name)
                         Addon:TrackedChanged()
                     end
                 end)
@@ -292,16 +329,23 @@ function Addon:RefreshList()
             else
                 row.icon:SetDesaturated(false); row.name:SetTextColor(1, 0.82, 0)
             end
-
-            y = y + UI.ROW_H; rows[#rows + 1] = row; content.cells[#content.cells + 1] = row
+            y = y + UI.ROW_H; rows[#rows + 1] = row
+            -- ensure the row and its interactive widgets are tracked so they get hidden/cleared
+            content.cells[#content.cells + 1] = row
+            content.cells[#content.cells + 1] = row.buy
+            content.cells[#content.cells + 1] = row.open
+            content.cells[#content.cells + 1] = row.conf
+            content.cells[#content.cells + 1] = row.remove
         end
     end
 
     -- Dynamic height + scrollbar (button moved to title row -> more space)
     local needed = y + 10
-    content:SetHeight(needed)
-    content:SetWidth(math.max(1, (scroll:GetWidth() or 1) - 4))
-    scroll:UpdateScrollChildRect()
+
+    -- Always reserve right margin for scrollbar space (prevents shifting when scrollbar appears/disappears)
+    local scrollWidth = scroll:GetWidth() or 1
+    local reserve = UI.SCROLLBAR_RESERVE or 24
+    content:SetWidth(math.max(1, scrollWidth - reserve))
 
     local headers = container.HeadersY or 52
     local chrome  = 6
@@ -309,18 +353,27 @@ function Addon:RefreshList()
     local finalH  = math.min(UI.MAX_H or 560, math.max(220, totalH))
     container:SetHeight(finalH)
 
+    -- Recompute to get actual viewport height after container resize
     scroll:UpdateScrollChildRect()
+    local atMaxHeight = (totalH >= (UI.MAX_H or 560))
     local viewport = (scroll:GetHeight() or 0)
-    local needScroll = (needed > viewport + 0.5)
+    local needScroll = atMaxHeight and (needed > viewport + 0.5)
+
+    -- Set content height: when below max height, match viewport to prevent premature scrolling
+    -- When at max height and scrolling is needed, use full needed height
+    if needScroll then
+        content:SetHeight(needed)
+    else
+        content:SetHeight(math.min(needed, viewport))
+    end
+    scroll:UpdateScrollChildRect()
     if needScroll then
         scroll.ScrollBar:Show()
-        scroll:ClearAllPoints()
-        scroll:SetPoint("TOPLEFT", 8, -52)
-        scroll:SetPoint("BOTTOMRIGHT", -28, 14)
     else
         scroll.ScrollBar:Hide()
-        scroll:ClearAllPoints()
-        scroll:SetPoint("TOPLEFT", 8, -52)
-        scroll:SetPoint("BOTTOMRIGHT", -8, 14)
     end
+    -- Keep scroll frame anchors consistent (always account for scrollbar space)
+    scroll:ClearAllPoints()
+    scroll:SetPoint("TOPLEFT", 8, -52)
+    scroll:SetPoint("BOTTOMRIGHT", -28, 14)
 end

@@ -1,61 +1,34 @@
+-- ui/layout.lua
+-- Shared UI constants and small layout helpers for consistent sizing and positioning
 local ADDON_NAME, Addon = ...
+
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
 
--- ===== Layout constants =====
-UI.CONTENT_PAD          = 8
-UI.LEFT_PAD             = 10
-UI.ICON_W               = 24
-UI.ICON_PAD             = 8
-UI.NAME_COL_W           = 210 -- wider, as requested
-UI.ROW_H                = 32
-UI.MAX_H                = 360
-UI.COL_W                = 26
-UI.COL_SP               = 12
+UI.CONTENT_PAD          = 8   -- Padding around the content area
+UI.LEFT_PAD             = 10  -- Left margin before items
+UI.ICON_W               = 24  -- Item icon width
+UI.ICON_PAD             = 8   -- Space between icon and name
+UI.NAME_COL_W           = 250 -- Item name column width
+UI.COL_SECTION_X        = 300 -- Start X position for the column section
+UI.ROW_H                = 32  -- Row height
+UI.MAX_H                = 360 -- Maximum panel height
+UI.COL_W                = 39  -- Width of checkbox columns (wide enough for "Confirm")
+UI.COL_SP               = 10  -- Space between columns (more breathing room between boxes)
+UI.REMOVE_PAD           = 20  -- Space before remove button (extra gap from Confirm)
+UI.SCROLLBAR_RESERVE    = 30  -- Dummy padding after Remove so scrollbar overlaps this space, not the button
 
--- ===== Small helpers =====
-function UI.MakeMovable(frame)
-    frame:SetMovable(true)
-    frame:EnableMouse(true)
-    frame:RegisterForDrag("LeftButton")
-    frame:SetClampedToScreen(true)
-    frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        local p, rel, rp, x, y = self:GetPoint(1)
-        CrestXmuteDB.framePos = { p, rel and rel:GetName() or "MerchantFrame", rp, x, y }
-    end)
-end
+UI.CHECKBOX_SCALE       = 0.7
+UI.REMOVE_SCALE         = 0.7
 
-function UI.ApplySavedPosition(f)
-    local pos = CrestXmuteDB.framePos
-    if not pos or not pos[1] then return false end
-    local rel = pos[2] and _G[pos[2]] or MerchantFrame or UIParent
-    f:ClearAllPoints()
-    f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
-    return true
-end
+-- Fallback absolute X positions in row space (CENTER-to-LEFT anchor)
+-- These reproduce the empirically tuned look if measurement/scaling is unavailable
+UI.X_BUY                = 460
+UI.X_OPEN               = 530
+UI.X_CONF               = 600
+UI.X_REMOVE             = 750
 
-function UI.DockOutsideMerchant(f)
-    f:ClearAllPoints()
-    if MerchantFrame and MerchantFrame:IsShown() then
-        f:SetPoint("LEFT", MerchantFrame, "RIGHT", 8, 0)
-    else
-        f:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    end
-end
-
--- Real item tooltip on widget hover
-function UI.BindItemTooltip(widget, itemID)
-    widget:EnableMouse(true)
-    widget:SetScript("OnEnter", function(self)
-        if not itemID then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetItemByID(itemID)
-        GameTooltip:Show()
-    end)
-    widget:SetScript("OnLeave", function() GameTooltip:Hide() end)
-end
+-- ===== Small helpers (used by list.lua) =====
 
 -- Wrap to maxLines (default 2); if still too tall, truncate with ellipsis.
 function UI.SetTwoLineTruncate(fs, text, width, maxLines)
@@ -85,6 +58,5 @@ function UI.SetTwoLineTruncate(fs, text, width, maxLines)
             hi = mid - 1
         end
     end
-    -- Lua has no ?: operator; use and/or idiom
     fs:SetText(best ~= "" and best or (s:sub(1, math.max(0, #s - 1)) .. "…"))
 end

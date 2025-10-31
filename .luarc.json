@@ -3,53 +3,80 @@
   "workspace.checkThirdParty": false,
 
   "diagnostics.globals": [
+    // Standard Lua (built-in, but explicitly listed for completeness)
+    "_G",
+    "pairs",
+    "ipairs",
+    "select",
+    "type",
+    "tonumber",
+    "print",
+    "math",
+    "string",
+    "table",
+
+    // WoW Frame/UI Creation
     "CreateFrame",
+    "UIParent",
+
+    // WoW Font/Text Constants
+    "GameFontNormal",
+    "GameFontNormalSmall",
+    "GameFontDisableSmall",
+    "GameFontHighlightSmall",
+
+    // WoW Tooltip
     "GameTooltip",
-    "GameTooltip_Hide",
-    "TooltipUtil",
+
+    // WoW Merchant Frame & API
     "MerchantFrame",
-    "MerchantFrameLootFilter",
     "GetMerchantNumItems",
     "GetMerchantItemLink",
     "GetMerchantItemInfo",
-    "BuyMerchantItem",
-    "GetItemInfo",
-    "GetItemInfoInstant",
-    "C_Container",
-    "C_Timer",
-    "C_TooltipInfo",
-    "UIErrorsFrame",
-    "NUM_BAG_SLOTS",
-    "SLASH_CRESTXMUTE1",
-    "SlashCmdList",
-    "IsControlKeyDown",
-    "IsShiftKeyDown",
-    "GetMouseFocus",
-    "GameFontNormalSmall",
-    "ANCHOR_RIGHT",
-    "ANCHOR_LEFT",
-    "ITEM_OPENABLE",
-    "GetItemSpell",
-    "ItemLocation",
-    "C_Item",
-    "UseItemByName",
     "GetMerchantItemCostInfo",
     "GetMerchantItemCostItem",
-    "C_CurrencyInfo",
+    "BuyMerchantItem",
+
+    // WoW Item API
+    "GetItemInfo",
+    "GetItemInfoInstant",
     "GetItemCount",
-    "StaticPopup1",
-    "StaticPopup1Button1",
-        "UIParent",
-        "InCombatLockdown",
-        "GetMacroIndexByName",
-        "GetNumMacros",
-        "CreateMacro",
-        "GetMacroInfo",
-        "EditMacro",
-        "MAX_CHARACTER_MACROS",
-        "PickupMacro",
-        "GetCursorPosition",
-        "GetTime",
-        "GetItemIcon"
+    "GetItemIcon",
+
+    // WoW Container API
+    "C_Container",
+    "NUM_BAG_SLOTS",
+
+    // WoW Currency API
+    "C_CurrencyInfo",
+
+    // WoW Item Data Loading
+    "C_Item",
+
+    // WoW Time/Position
+    "GetTime",
+    "GetCursorPosition",
+
+    // WoW Timer
+    "C_Timer",
+
+    // WoW Combat
+    "InCombatLockdown",
+
+    // WoW Macro API
+    "GetMacroIndexByName",
+    "GetNumMacros",
+    "CreateMacro",
+    "GetMacroInfo",
+    "EditMacro",
+    "PickupMacro",
+    "MAX_CHARACTER_MACROS",
+
+    // WoW Slash Commands
+    "SLASH_CRESTXMUTE1",
+    "SlashCmdList",
+
+    // WoW UI Error Frame
+    "UIErrorsFrame"
   ]
 }

@@ -1,13 +1,13 @@
+-- macro.lua
+-- Builds and syncs the Buy+Open macro and the docked clicker text
 local ADDON_NAME, Addon = ...
 
 local MACRO_NAME = "CrestX-Open"
 local MACRO_ICON = "INV_Misc_Bag_10_Black"
 local MAX_BODY = 255
+local MAX_BAG_ITEMS = 30 -- Max distinct item IDs to collect from bags for /use lines
 
-local function InCombat()
-    return InCombatLockdown()
-end
-
+-- Build a compact /run line that buys the first matching item ID from the merchant list
 local function BuildBuySnippet_one(ids)
     if #ids == 0 then return nil end
     local id = ids[1]
@@ -16,6 +16,9 @@ local function BuildBuySnippet_one(ids)
         id)
 end
 
+-- Compose the macro body (<= 255 chars) from:
+-- - Buy one top-priority affordable item with Buy enabled (optional confirm click)
+-- - /use item:<id> lines for tracked+enabled items present in bags
 function Addon:BuildMacroBody()
     local parts, length = {}, 0
 
@@ -47,11 +50,11 @@ function Addon:BuildMacroBody()
     end
 
     -- Fill remaining with /use item:<id> for items present in bags and Open enabled
-    local openIDs = Addon:CollectTrackedIDsInBags(30)
-    for _, id in ipairs(openIDs) do
-        local tog = Addon:GetItemToggles(id)
+    local openIDs = Addon:CollectTrackedIDsInBags(MAX_BAG_ITEMS)
+    for _, itemID in ipairs(openIDs) do
+        local tog = Addon:GetItemToggles(itemID)
         if tog.open then
-            local line = "/use item:" .. id
+            local line = "/use item:" .. itemID
             if (length + #line + 1) <= MAX_BODY then
                 parts[#parts + 1] = line; length = length + #line + 1
             else
@@ -64,8 +67,10 @@ function Addon:BuildMacroBody()
     return table.concat(parts, "\n")
 end
 
+-- Create or update the character macro and docked clicker with the same text
+-- Skips in combat, and no-ops if the body would be empty
 function Addon:SyncOpenMacro(force)
-    if InCombat() then
+    if InCombatLockdown() then
         UIErrorsFrame:AddMessage("|cffffd100CrestXmute: Can't update macro in combat.|r")
         return
     end
