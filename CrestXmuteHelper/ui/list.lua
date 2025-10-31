@@ -108,6 +108,9 @@ function Addon:RefreshList()
     local candidateSet = ComputeTopCandidatesByGroup()
     local rowDebugCount = 0 -- Counter for debug logging
 
+    -- Get the item that will actually be purchased (the top affordable with buy enabled)
+    local nextPurchaseID = Addon:GetTopAffordableSingle()
+
     local function makeRow(parent, yTop)
         rowDebugCount = rowDebugCount + 1
         -- Rows anchor to both edges of content and follow its width (content width accounts for scrollbar reserve)
@@ -116,6 +119,12 @@ function Addon:RefreshList()
         f:SetPoint("TOPLEFT", 0, -yTop)
         f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -yTop)
         f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
+
+        -- Background highlight texture (for next-purchase indicator)
+        f.highlight = f:CreateTexture(nil, "BACKGROUND")
+        f.highlight:SetAllPoints()
+        f.highlight:SetColorTexture(0.2, 0.4, 0.6, 0.15) -- Subtle blue tint
+        f.highlight:Hide()
 
         -- Icon (at the far left)
         f.icon = f:CreateTexture(nil, "ARTWORK")
@@ -291,6 +300,13 @@ function Addon:RefreshList()
 
             local tog = Addon:GetItemToggles(e.itemID)
             row.buy:SetChecked(tog.buy); row.open:SetChecked(tog.open); row.conf:SetChecked(tog.confirm)
+
+            -- Highlight this row if it's the next item to be purchased
+            if nextPurchaseID and e.itemID == nextPurchaseID then
+                row.highlight:Show()
+            else
+                row.highlight:Hide()
+            end
 
             row.buy:SetScript("OnClick", function(self)
                 local t = Addon:GetItemToggles(e.itemID); t.buy = self:GetChecked() or false

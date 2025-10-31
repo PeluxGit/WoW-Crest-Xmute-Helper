@@ -7,13 +7,12 @@ local MACRO_ICON = "INV_Misc_Bag_10_Black"
 local MAX_BODY = 255
 local MAX_BAG_ITEMS = 30 -- Max distinct item IDs to collect from bags for /use lines
 
--- Build a compact /run line that buys the first matching item ID from the merchant list
-local function BuildBuySnippet_one(ids)
-    if #ids == 0 then return nil end
-    local id = ids[1]
+-- Build a compact /run line that buys the target item ID from the merchant
+local function BuildBuySnippet(itemID)
+    if not itemID then return nil end
     return string.format(
-        "/run g=GetMerchantNumItems m=GetMerchantItemLink I=GetItemInfoInstant B=BuyMerchantItem T={[%d]=1}for i=1,g()do l=m(i)if l and T[I(l)]then B(i)break end end",
-        id)
+        "/run g=GetMerchantNumItems m=GetMerchantItemLink I=GetItemInfoInstant B=BuyMerchantItem for i=1,g()do l=m(i)if l and I(l)==%d then B(i)break end end",
+        itemID)
 end
 
 -- Compose the macro body (<= 255 chars) from:
@@ -23,11 +22,9 @@ function Addon:BuildMacroBody()
     local parts, length = {}, 0
 
     -- Always buy one: top-priority affordable with Buy enabled
-    local buyIds = {}
     local topId = Addon:GetTopAffordableSingle()
-    if topId then buyIds[1] = topId end
 
-    local buyLine = BuildBuySnippet_one(buyIds)
+    local buyLine = BuildBuySnippet(topId)
     if buyLine then
         if (length + #buyLine + 1) <= MAX_BODY then
             parts[#parts + 1] = buyLine; length = length + #buyLine + 1
@@ -38,8 +35,8 @@ function Addon:BuildMacroBody()
 
     -- Optional /click confirm — per-item only
     local needConfirm = false
-    if buyIds and #buyIds > 0 then
-        local tog = Addon:GetItemToggles(buyIds[1])
+    if topId then
+        local tog = Addon:GetItemToggles(topId)
         needConfirm = tog and tog.confirm
     end
     if needConfirm then
