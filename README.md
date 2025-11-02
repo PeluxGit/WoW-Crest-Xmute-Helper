@@ -4,7 +4,7 @@ WoW addon that automates crest transmutation with a single macro.
 
 ## What It Does
 
-Spam one macro to buy and open crest upgrade packs at transmutaiton vendors.
+Dynamically updates a macro with your next action (buy or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor.
 
 ## Installation
 
