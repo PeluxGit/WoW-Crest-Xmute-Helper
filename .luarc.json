@@ -71,12 +71,16 @@
     "EditMacro",
     "PickupMacro",
     "MAX_CHARACTER_MACROS",
+    "MAX_GLOBAL_MACROS",
 
     // WoW Slash Commands
     "SLASH_CRESTXMUTE1",
     "SlashCmdList",
 
     // WoW UI Error Frame
-    "UIErrorsFrame"
+    "UIErrorsFrame",
+
+    // WoW SavedVariables
+    "CrestXmuteDB"
   ]
 }

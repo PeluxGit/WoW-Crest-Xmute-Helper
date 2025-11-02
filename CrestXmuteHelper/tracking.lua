@@ -18,7 +18,11 @@ end
 
 -- True if the item is part of the season seed list (always tracked)
 function Addon:IsSeedItem(itemID)
-    return self.DEFAULT_SEED and self.DEFAULT_SEED[itemID] or false
+    if not itemID or not self.DEFAULT_SEED then return false end
+    for _, seedID in ipairs(self.DEFAULT_SEED) do
+        if seedID == itemID then return true end
+    end
+    return false
 end
 
 -- Return the user-tracked set (SavedVariables)
@@ -32,7 +36,7 @@ function Addon:GetTrackedUnion()
     ensureDB()
     local union = {}
     if self.DEFAULT_SEED then
-        for itemID in pairs(self.DEFAULT_SEED) do
+        for _, itemID in ipairs(self.DEFAULT_SEED) do
             union[itemID] = true
         end
     end
@@ -157,8 +161,8 @@ function Addon:DumpTracked()
     local count = 0
     for id in pairs(u) do
         local name = GetItemInfo(id) or ("item:" .. id)
-        local isSeed = self.DEFAULT_SEED and self.DEFAULT_SEED[id]
-        print(("  - %s (%d)%s"):format(name, id, isSeed and "  |cff8888ff[seed]|r" or ""))
+        local isSeed = self:IsSeedItem(id)
+        print(string.format("  [%d] %s%s", id, name, isSeed and " (seed)" or ""))
         count = count + 1
     end
     if count == 0 then

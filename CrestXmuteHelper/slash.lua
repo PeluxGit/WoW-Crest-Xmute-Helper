@@ -37,11 +37,27 @@ SlashCmdList.CRESTXMUTE = function(msg)
         if Addon.ShowUIForMerchant then
             Addon:ShowUIForMerchant()
         end
+    elseif cmd == "reset" then
+        -- Reset window position
+        CrestXmuteDB = CrestXmuteDB or {}
+        CrestXmuteDB.framePos = nil
+        print("|cff33ff99CrestXmute:|r Window position reset. It will reposition next time you open a merchant.")
+        -- If the window is currently open, reposition it now
+        if Addon.Container and Addon.Container:IsShown() then
+            Addon.Container:ClearAllPoints()
+            if MerchantFrame and MerchantFrame:IsShown() then
+                Addon.Container:SetPoint("LEFT", MerchantFrame, "RIGHT", 8, 0)
+            else
+                Addon.Container:SetPoint("CENTER", UIParent, "CENTER")
+            end
+            print("|cff33ff99CrestXmute:|r Window repositioned.")
+        end
     else
         print("|cffffd200CrestXmute|r commands:")
         print("  /cxh add <itemLink|itemID>")
         print("  /cxh list")
         print("  /cxh debug [on|off|status]  (no arg = toggle)")
         print("  /cxh show")
+        print("  /cxh reset - Reset window position")
     end
 end

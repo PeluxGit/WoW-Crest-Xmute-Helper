@@ -1,8 +1,8 @@
 ## Interface: 110205
 ## Title: Crest Xmute Helper
 ## Notes: Spammable macro builder for crest transmutation: buy + open
-## Author: You
-## Version: 1
+## Author: Pelux
+## Version: 1.0.0
 ## SavedVariables: CrestXmuteDB
 
 core.lua

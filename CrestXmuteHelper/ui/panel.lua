@@ -30,17 +30,15 @@ local function ComputeColumns(container)
     }
 
     -- DEBUG: Log header calculation
-    if Addon and Addon.DEBUG then
-        print(string.format("[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
-            frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W))
-        print(string.format("[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
-            afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD))
-        print(string.format("[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
-            buyX, openX, confX, removeX))
-        print(string.format("[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
-            container._colCenters[1], container._colCenters[2],
-            container._colCenters[3], container._colCenters[4]))
-    end
+    Addon:DebugPrint("[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
+        frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
+    Addon:DebugPrint("[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
+        afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
+    Addon:DebugPrint("[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
+        buyX, openX, confX, removeX)
+    Addon:DebugPrint("[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
+        container._colCenters[1], container._colCenters[2],
+        container._colCenters[3], container._colCenters[4])
 end
 
 -- Make the container movable without stealing drags from the scroll area
@@ -71,17 +69,36 @@ local function MakeMovable(frame)
         self:StopMovingOrSizing(); self._moving = false
         local p, rel, rp, x, y = self:GetPoint(1)
         CrestXmuteDB = CrestXmuteDB or {}
-        CrestXmuteDB.framePos = { p, rel and rel:GetName() or "MerchantFrame", rp, x, y }
+        -- Save relative frame name, fallback to "UIParent" if no name
+        local relName = "UIParent"
+        if rel then
+            relName = rel:GetName() or "UIParent"
+        end
+        CrestXmuteDB.framePos = { p, relName, rp, x, y }
+        Addon:DebugPrint("[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName, rp or "?", x or 0,
+            y or 0)
     end)
 end
 
 -- Restore a previously saved position, returns true if applied
 local function ApplySavedPosition(f)
     local pos = CrestXmuteDB and CrestXmuteDB.framePos
-    if not pos or not pos[1] then return false end
-    local rel = pos[2] and _G[pos[2]] or MerchantFrame or UIParent
+    if not pos or not pos[1] then
+        Addon:DebugPrint("[LoadPosition] No saved position found")
+        return false
+    end
+
+    -- Try to get the relative frame by name, fallback to UIParent
+    local relName = pos[2] or "UIParent"
+    local rel = _G[relName]
+    if not rel then
+        Addon:DebugPrint("[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
+        rel = UIParent
+    end
+
     f:ClearAllPoints()
     f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
+    Addon:DebugPrint("[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName, pos[3], pos[4], pos[5])
     return true
 end
 
@@ -155,12 +172,6 @@ function Addon:SetAddMode(flag)
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
 
-function Addon:UpdateClickerMacroText(body)
-    if not self.Container or not self.Container.Clicker or InCombatLockdown() then return end
-    self.Container.Clicker:SetAttribute("type", "macro")
-    self.Container.Clicker:SetAttribute("macrotext", body or "")
-end
-
 function Addon:EnsureUI()
     if self.Container then return end
 
@@ -203,23 +214,33 @@ function Addon:EnsureUI()
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
 
-    -- Buy+Open now sits next to the title to free vertical space at the bottom.
-    local clicker = CreateFrame("Button", "CrestXmuteClicker", container,
-        "SecureActionButtonTemplate, UIPanelButtonTemplate")
-    clicker:SetSize(132, 22)
-    clicker:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6) -- safe: frame→frame
-    clicker:SetText("Buy / Open")
-    clicker:RegisterForDrag("LeftButton")
-    clicker:SetScript("OnDragStart", function(self)
-        if InCombatLockdown() then return end
-        local idx = GetMacroIndexByName("CrestX-Open")
-        if idx and idx > 0 then PickupMacro(idx) end
+    -- Create a button that picks up the macro when clicked
+    local macroBtn = CreateFrame("Button", nil, container)
+    macroBtn:SetSize(36, 36)
+    macroBtn:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
+    macroBtn:SetNormalTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    macroBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    macroBtn:SetScript("OnClick", function()
+        local macroIndex = GetMacroIndexByName("CrestX-Open")
+        if macroIndex and macroIndex > 0 then
+            PickupMacro(macroIndex)
+        else
+            UIErrorsFrame:AddMessage(
+                "|cffff6600CrestXmute: Macro 'CrestX-Open' not found. Visit a merchant to create it.|r")
+        end
     end)
-    container.Clicker = clicker
+    macroBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("CrestX-Open Macro", 1, 1, 1)
+        GameTooltip:AddLine("Click to pick up the macro, then drag it to your action bar.", nil, nil, nil, true)
+        GameTooltip:Show()
+    end)
+    macroBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    container.MacroBtn = macroBtn
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     addMode:SetScale(0.9)
-    addMode:SetPoint("RIGHT", clicker, "LEFT", -12, 0)
+    addMode:SetPoint("RIGHT", macroBtn, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lbl:SetPoint("RIGHT", addMode, "LEFT", -4, 0)
@@ -256,7 +277,7 @@ function Addon:EnsureUI()
         fs:SetPoint("TOPLEFT", container, "TOPLEFT", absX, -32)
 
         -- DEBUG: Log header placement AND actual measured positions
-        if Addon and Addon.DEBUG then
+        if Addon and Addon.IsDebug and Addon:IsDebug() then
             C_Timer.After(0.02, function()
                 if fs.GetCenter and fs.GetLeft then
                     local centerX = fs:GetCenter()
@@ -264,9 +285,9 @@ function Addon:EnsureUI()
                     local containerLeft = container and container.GetLeft and container:GetLeft() or 0
                     local uiScale = container:GetEffectiveScale()
                     local screenCenterX = centerX * uiScale
-                    print(string.format(
+                    Addon:DebugPrint(
                         "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
-                        name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale, screenCenterX))
+                        name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale, screenCenterX)
                 end
             end)
         end
@@ -301,6 +322,39 @@ function Addon:EnsureUI()
     empty:SetText("No tracked items found on this vendor.\nUse /cxh add <linkOrID> or enable Add Mode.")
     container.EmptyState = empty; empty:Hide()
 
+    -- Color legend at the bottom
+    local legend = CreateFrame("Frame", nil, container)
+    legend:SetPoint("BOTTOMLEFT", 8, 4)
+    legend:SetPoint("BOTTOMRIGHT", -8, 4)
+    legend:SetHeight(16)
+
+    local function makeLegendItem(parent, prevItem, color, text)
+        local item = CreateFrame("Frame", nil, parent)
+        item:SetSize(12, 12)
+        if prevItem then
+            item:SetPoint("LEFT", prevItem, "RIGHT", 8, 0)
+        else
+            item:SetPoint("LEFT", 0, 0)
+        end
+
+        local box = item:CreateTexture(nil, "BACKGROUND")
+        box:SetAllPoints()
+        box:SetColorTexture(color[1], color[2], color[3], color[4])
+
+        local label = item:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        label:SetPoint("LEFT", item, "RIGHT", 4, 0)
+        label:SetText(text)
+        label:SetTextColor(0.8, 0.8, 0.8)
+
+        return item
+    end
+
+    local buy = makeLegendItem(legend, nil, { 0.2, 0.4, 0.8, 0.15 }, "Will Buy")
+    local use = makeLegendItem(legend, buy, { 0.8, 0.6, 0.2, 0.15 }, "Will Open")
+    local both = makeLegendItem(legend, use, { 0.5, 0.7, 0.6, 0.20 }, "Both")
+
+    container.Legend = legend
+
     self.Container = container
 end
 
@@ -314,8 +368,14 @@ function Addon:ShowUIForMerchant()
     if self.RefreshList then
         -- Wait a frame to ensure merchant data is loaded
         C_Timer.After(0.03, function()
-            if self.Container and self.Container:IsShown() and self.RefreshList then
-                self:RefreshList()
+            if self.Container and self.Container:IsShown() then
+                if self.RefreshList then
+                    self:RefreshList()
+                end
+                -- Sync macro when first showing UI so it reflects current merchant state
+                if self.SyncOpenMacro then
+                    self:SyncOpenMacro(true)
+                end
             end
         end)
     end

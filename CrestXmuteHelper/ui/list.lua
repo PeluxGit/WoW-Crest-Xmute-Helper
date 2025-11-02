@@ -83,6 +83,7 @@ local function BuildGroupedEntries()
     return flatList
 end
 
+-- Clear all entries from a table (reuses the table reference instead of creating a new one)
 local function Wipe(t) for k in pairs(t) do t[k] = nil end end
 
 function Addon:TrackedChanged()
@@ -111,6 +112,18 @@ function Addon:RefreshList()
     -- Get the item that will actually be purchased (the top affordable with buy enabled)
     local nextPurchaseID = Addon:GetTopAffordableSingle()
 
+    -- Get the next item that will be used (first item in bags with Open enabled)
+    local nextUseID = nil
+    if Addon.CollectTrackedIDsInBags then
+        local openIDs = Addon:CollectTrackedIDsInBags(1) -- Only need the first one
+        if openIDs and #openIDs > 0 then
+            local tog = Addon:GetItemToggles(openIDs[1])
+            if tog and tog.open then
+                nextUseID = openIDs[1]
+            end
+        end
+    end
+
     local function makeRow(parent, yTop)
         rowDebugCount = rowDebugCount + 1
         -- Rows anchor to both edges of content and follow its width (content width accounts for scrollbar reserve)
@@ -120,10 +133,9 @@ function Addon:RefreshList()
         f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -yTop)
         f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
 
-        -- Background highlight texture (for next-purchase indicator)
+        -- Background highlight texture (for next-purchase/use indicator)
         f.highlight = f:CreateTexture(nil, "BACKGROUND")
         f.highlight:SetAllPoints()
-        f.highlight:SetColorTexture(0.2, 0.4, 0.6, 0.15) -- Subtle blue tint
         f.highlight:Hide()
 
         -- Icon (at the far left)
@@ -178,12 +190,12 @@ function Addon:RefreshList()
         local X_REMOVE = applyCheckbox(baseRemX) or (UI.X_REMOVE or 765)
         X_REMOVE       = X_REMOVE - (UI.SCROLLBAR_RESERVE or 24)
 
-        if Addon and Addon.DEBUG and rowDebugCount == 1 then
-            print(string.format(
+        if rowDebugCount == 1 then
+            Addon:DebugPrint(
                 "[X-FORMULA] (always scale-aware) childScale=%.3f, scaleCorr=%.3f, base(b/o/c/r)=%.1f/%.1f/%.1f/%.1f -> X=%.1f/%.1f/%.1f/%.1f",
                 childScale, scaleCorr, baseBuyX or -1, baseOpenX or -1, baseConfX or -1,
                 (centers and ((centers[4] + containerLeft) - contentLeft)) or -1,
-                X_BUY, X_OPEN, X_CONF, X_REMOVE))
+                X_BUY, X_OPEN, X_CONF, X_REMOVE)
         end
 
         f.buy:SetPoint("CENTER", f, "LEFT", X_BUY, 0)
@@ -293,16 +305,32 @@ function Addon:RefreshList()
             row.itemID = e.itemID
             row.icon:SetTexture(Addon:GetItemIcon(e.itemID))
             UI.SetTwoLineTruncate(row.name, e.name or ("item:" .. e.itemID), UI.NAME_COL_W, 2)
-            BindItemTooltip(row, e.itemID); BindItemTooltip(row.name, e.itemID)
 
-            -- Also bind tooltip to dragZone so it shows when mousing over the drag area
+            -- Bind tooltip only to icon, name, and dragZone (not the entire row)
+            BindItemTooltip(row.icon, e.itemID)
+            BindItemTooltip(row.name, e.itemID)
             BindItemTooltip(row.dragZone, e.itemID)
 
             local tog = Addon:GetItemToggles(e.itemID)
             row.buy:SetChecked(tog.buy); row.open:SetChecked(tog.open); row.conf:SetChecked(tog.confirm)
 
-            -- Highlight this row if it's the next item to be purchased
-            if nextPurchaseID and e.itemID == nextPurchaseID then
+            -- Highlight this row based on what action will happen next
+            local willBuy = (nextPurchaseID and e.itemID == nextPurchaseID)
+            local willUse = (nextUseID and e.itemID == nextUseID)
+
+            if willBuy and willUse then
+                -- Both buy and use: Blend of blue + gold (additive)
+                -- Blue (0.2, 0.4, 0.8) + Gold (0.8, 0.6, 0.2) = (1.0, 1.0, 1.0) normalized to (0.5, 0.5, 0.5)
+                -- Using a teal/cyan blend: combines cool blue with warm gold
+                row.highlight:SetColorTexture(0.5, 0.7, 0.6, 0.20)
+                row.highlight:Show()
+            elseif willBuy then
+                -- Will be purchased: Blue
+                row.highlight:SetColorTexture(0.2, 0.4, 0.8, 0.15)
+                row.highlight:Show()
+            elseif willUse then
+                -- Will be used/opened: Gold/Orange
+                row.highlight:SetColorTexture(0.8, 0.6, 0.2, 0.15)
                 row.highlight:Show()
             else
                 row.highlight:Hide()

@@ -26,9 +26,9 @@ end
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
 Addon.DEFAULT_SEED = {
-    [240931] = true, -- Example: Aspect’s Crest Pack
-    [240930] = true, -- Example: Wyrm’s Crest Pack
-    [240929] = true, -- Example: Drake’s Crest Pack
+    240931, -- Example: Aspect's Crest Pack
+    240930, -- Example: Wyrm's Crest Pack
+    240929, -- Example: Drake's Crest Pack
 }
 
 -- Defaults + schema (all user data under .user)
@@ -44,7 +44,13 @@ function Addon:EnsureDB()
     CrestXmuteDB.framePos = CrestXmuteDB.framePos or nil -- window position
 end
 
-function Addon:IsSeeded(id) return self.DEFAULT_SEED[id] == true end
+function Addon:IsSeeded(id)
+    if not id or not self.DEFAULT_SEED then return false end
+    for _, seedID in ipairs(self.DEFAULT_SEED) do
+        if seedID == id then return true end
+    end
+    return false
+end
 
 function Addon:IsUser(id) return CrestXmuteDB.user.tracked[id] == true end
 
@@ -112,8 +118,23 @@ function Addon:GetPrimaryCostKey(idx)
     return "misc", nil, nil
 end
 
-function Addon:DebugPrint(...)
-    if self.DEBUG then print("|cff88ccffCrestXmute:", ...) end
+function Addon:DebugPrint(msg, ...)
+    if not self.DEBUG then return end
+    local argCount = select("#", ...)
+    if argCount > 0 then
+        if type(msg) == "string" then
+            local ok, formatted = pcall(string.format, msg, ...)
+            if ok then
+                print("|cff88ccffCrestXmute:", formatted)
+            else
+                print("|cff88ccffCrestXmute:", msg, ...)
+            end
+        else
+            print("|cff88ccffCrestXmute:", msg, ...)
+        end
+    else
+        print("|cff88ccffCrestXmute:", msg)
+    end
 end
 
 -- Public init
