@@ -31,6 +31,28 @@ local function ApplyElvUISkin()
 
     local UI = Addon.UI or {}
 
+    local function AddCheckboxHoverEffect(checkbox)
+        if not checkbox or not checkbox.backdrop then return end
+
+        -- Store original colors
+        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+        local borderColor = E.media.bordercolor or { 0, 0, 0 }
+        local hoverColor = { 0.2, 0.2, 0.2 } -- Lighter on hover
+
+        checkbox:HookScript("OnEnter", function(self)
+            if self.backdrop and not self:GetChecked() then
+                self.backdrop:SetBackdropColor(hoverColor[1], hoverColor[2], hoverColor[3], 1)
+            end
+        end)
+
+        checkbox:HookScript("OnLeave", function(self)
+            if self.backdrop and not self:GetChecked() then
+                self.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                    backdropColor[4] or 1)
+            end
+        end)
+    end
+
     local function SkinContainer()
         local container = Addon.Container
         if not container then return end
@@ -105,6 +127,8 @@ local function ApplyElvUISkin()
                 container.AddModeBtn.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                     backdropColor[4] or 1)
             end
+            -- Add hover effect
+            AddCheckboxHoverEffect(container.AddModeBtn)
         end
 
         -- Store the effective checkbox scale for positioning calculations
@@ -120,6 +144,12 @@ local function ApplyElvUISkin()
 
         -- Skin checkboxes in rows (checkboxes are recreated each refresh, so always skin)
         for _, cell in ipairs(container.Content.cells) do
+            -- Apply perfect square cropping to item icons (ElvUI style)
+            if cell.icon and not cell.icon._elvuiCropped then
+                cell.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                cell.icon._elvuiCropped = true
+            end
+
             -- Check if this is a row with checkboxes (not a header)
             if cell.buy then
                 if S.HandleCheckBox and not cell.buy._elvuiSkinned then
@@ -133,6 +163,8 @@ local function ApplyElvUISkin()
                         cell.buy.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                             backdropColor[4] or 1)
                     end
+                    -- Add hover effect
+                    AddCheckboxHoverEffect(cell.buy)
                     cell.buy._elvuiSkinned = true
                 end
             end
@@ -148,6 +180,8 @@ local function ApplyElvUISkin()
                         cell.open.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                             backdropColor[4] or 1)
                     end
+                    -- Add hover effect
+                    AddCheckboxHoverEffect(cell.open)
                     cell.open._elvuiSkinned = true
                 end
             end
@@ -163,6 +197,8 @@ local function ApplyElvUISkin()
                         cell.conf.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                             backdropColor[4] or 1)
                     end
+                    -- Add hover effect
+                    AddCheckboxHoverEffect(cell.conf)
                     cell.conf._elvuiSkinned = true
                 end
             end
@@ -182,13 +218,10 @@ local function ApplyElvUISkin()
         end)
     end
 
-    -- Hook RefreshList to skin new rows (wrap in timer to ensure rows exist)
+    -- Hook RefreshList to skin new rows
     if type(Addon.RefreshList) == "function" then
         hooksecurefunc(Addon, "RefreshList", function()
-            -- Small delay to ensure rows are fully created before skinning
-            C_Timer.After(0.01, function()
-                SkinRows()
-            end)
+            SkinRows()
         end)
     end
 
