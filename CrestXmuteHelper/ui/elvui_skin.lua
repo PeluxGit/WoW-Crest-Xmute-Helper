@@ -36,7 +36,6 @@ local function ApplyElvUISkin()
 
         -- Store original colors
         local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
-        local borderColor = E.media.bordercolor or { 0, 0, 0 }
         local hoverColor = { 0.2, 0.2, 0.2 } -- Lighter on hover
 
         checkbox:HookScript("OnEnter", function(self)
@@ -58,13 +57,19 @@ local function ApplyElvUISkin()
         if not container then return end
         if container._elvuiSkinned then return end
 
-        -- Skin the main frame
-        if S.HandleFrame then
-            S:HandleFrame(container, false, true)
+        -- Skin the main frame (with error handling)
+        if S and S.HandleFrame then
+            local success, err = pcall(S.HandleFrame, S, container, false, true)
+            if not success then
+                print("|cffff0000[CrestXmute]|r ElvUI HandleFrame failed:", err)
+            end
         end
         -- Apply ElvUI's Transparent template to match their style (reduced opacity backdrop)
         if container.SetTemplate then
-            container:SetTemplate("Transparent")
+            local success, err = pcall(container.SetTemplate, container, "Transparent")
+            if not success then
+                print("|cffff0000[CrestXmute]|r ElvUI SetTemplate failed:", err)
+            end
         end
         -- Ensure we use ElvUI's configured fade/backdrop colors (less opaque than Default)
         if E and E.media then
@@ -88,19 +93,28 @@ local function ApplyElvUISkin()
 
         -- Skin the scroll frame and scrollbar
         if container.Scroll then
-            if S.HandleScrollBar then
-                S:HandleScrollBar(container.Scroll.ScrollBar)
+            if S and S.HandleScrollBar and container.Scroll.ScrollBar then
+                local success, err = pcall(S.HandleScrollBar, S, container.Scroll.ScrollBar)
+                if not success then
+                    print("|cffff0000[CrestXmute]|r ElvUI HandleScrollBar failed:", err)
+                end
             end
             -- If ElvUI template helpers exist, apply Transparent to scroll container too
             if container.Scroll.SetTemplate then
-                container.Scroll:SetTemplate("Transparent")
+                local success, err = pcall(container.Scroll.SetTemplate, container.Scroll, "Transparent")
+                if not success then
+                    print("|cffff0000[CrestXmute]|r ElvUI SetTemplate on scroll failed:", err)
+                end
             end
         end
 
         -- Skin the macro button and restore its icon texture
         if container.MacroBtn then
-            if S.HandleButton then
-                S:HandleButton(container.MacroBtn)
+            if S and S.HandleButton then
+                local success, err = pcall(S.HandleButton, S, container.MacroBtn)
+                if not success then
+                    print("|cffff0000[CrestXmute]|r ElvUI HandleButton failed:", err)
+                end
             end
             -- ElvUI's HandleButton may strip the icon, so reapply it
             local iconTexture = container.MacroBtn:GetNormalTexture()
@@ -115,8 +129,11 @@ local function ApplyElvUISkin()
 
         -- Skin the Add Mode checkbox and make it smaller
         if container.AddModeBtn then
-            if S.HandleCheckBox then
-                S:HandleCheckBox(container.AddModeBtn)
+            if S and S.HandleCheckBox then
+                local success, err = pcall(S.HandleCheckBox, S, container.AddModeBtn)
+                if not success then
+                    print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (AddMode) failed:", err)
+                end
             end
             -- Scale down for ElvUI relative to base ADDMODE_SCALE
             local baseScale = UI.ADDMODE_SCALE or 0.9
@@ -152,60 +169,76 @@ local function ApplyElvUISkin()
 
             -- Check if this is a row with checkboxes (not a header)
             if cell.buy then
-                if S.HandleCheckBox and not cell.buy._elvuiSkinned then
-                    S:HandleCheckBox(cell.buy)
-                    -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                    local baseScale = UI.CHECKBOX_SCALE or 0.7
-                    cell.buy:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
-                    -- Only set background color for unchecked state
-                    if cell.buy.backdrop then
-                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
-                        cell.buy.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
-                            backdropColor[4] or 1)
+                if S and S.HandleCheckBox and not cell.buy._elvuiSkinned then
+                    local success, err = pcall(S.HandleCheckBox, S, cell.buy)
+                    if not success then
+                        print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (buy) failed:", err)
+                    else
+                        -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
+                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        cell.buy:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        -- Only set background color for unchecked state
+                        if cell.buy.backdrop then
+                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            cell.buy.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                                backdropColor[4] or 1)
+                        end
+                        -- Add hover effect
+                        AddCheckboxHoverEffect(cell.buy)
+                        cell.buy._elvuiSkinned = true
                     end
-                    -- Add hover effect
-                    AddCheckboxHoverEffect(cell.buy)
-                    cell.buy._elvuiSkinned = true
                 end
             end
             if cell.open then
-                if S.HandleCheckBox and not cell.open._elvuiSkinned then
-                    S:HandleCheckBox(cell.open)
-                    -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                    local baseScale = UI.CHECKBOX_SCALE or 0.7
-                    cell.open:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
-                    -- Only set background color for unchecked state
-                    if cell.open.backdrop then
-                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
-                        cell.open.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
-                            backdropColor[4] or 1)
+                if S and S.HandleCheckBox and not cell.open._elvuiSkinned then
+                    local success, err = pcall(S.HandleCheckBox, S, cell.open)
+                    if not success then
+                        print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (open) failed:", err)
+                    else
+                        -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
+                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        cell.open:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        -- Only set background color for unchecked state
+                        if cell.open.backdrop then
+                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            cell.open.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                                backdropColor[4] or 1)
+                        end
+                        -- Add hover effect
+                        AddCheckboxHoverEffect(cell.open)
+                        cell.open._elvuiSkinned = true
                     end
-                    -- Add hover effect
-                    AddCheckboxHoverEffect(cell.open)
-                    cell.open._elvuiSkinned = true
                 end
             end
             if cell.conf then
-                if S.HandleCheckBox and not cell.conf._elvuiSkinned then
-                    S:HandleCheckBox(cell.conf)
-                    -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                    local baseScale = UI.CHECKBOX_SCALE or 0.7
-                    cell.conf:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
-                    -- Only set background color for unchecked state
-                    if cell.conf.backdrop then
-                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
-                        cell.conf.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
-                            backdropColor[4] or 1)
+                if S and S.HandleCheckBox and not cell.conf._elvuiSkinned then
+                    local success, err = pcall(S.HandleCheckBox, S, cell.conf)
+                    if not success then
+                        print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (conf) failed:", err)
+                    else
+                        -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
+                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        cell.conf:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        -- Only set background color for unchecked state
+                        if cell.conf.backdrop then
+                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            cell.conf.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                                backdropColor[4] or 1)
+                        end
+                        -- Add hover effect
+                        AddCheckboxHoverEffect(cell.conf)
+                        cell.conf._elvuiSkinned = true
                     end
-                    -- Add hover effect
-                    AddCheckboxHoverEffect(cell.conf)
-                    cell.conf._elvuiSkinned = true
                 end
             end
             if cell.remove then
-                if S.HandleCloseButton and not cell.remove._elvuiSkinned then
-                    S:HandleCloseButton(cell.remove)
-                    cell.remove._elvuiSkinned = true
+                if S and S.HandleCloseButton and not cell.remove._elvuiSkinned then
+                    local success, err = pcall(S.HandleCloseButton, S, cell.remove)
+                    if not success then
+                        print("|cffff0000[CrestXmute]|r ElvUI HandleCloseButton (remove) failed:", err)
+                    else
+                        cell.remove._elvuiSkinned = true
+                    end
                 end
             end
         end
