@@ -4,7 +4,7 @@ WoW addon that automates crest transmutation with a single macro.
 
 ## What It Does
 
-Dynamically updates a macro with your next action (buy or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor.
+Dynamically updates a macro with your next action (buy and/or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor.
 
 ## Installation
 
@@ -40,38 +40,39 @@ Works with any vendor items, not just crests.
 
 ## How It Works
 
-Generates a macro (`CrestX-Open` in General tab) that performs one action per click:
+The addon creates a macro (`CrestX-Open` in the General tab) that you can place on your action bar. Click the macro pickup button (top-right of the panel) to grab it.
 
-1. **Opens one container** - If you have a tracked container in bags with "Open" enabled, uses it
-2. **OR buys one item** - If at a vendor, buys the highest priority affordable item with "Buy" enabled
-3. **Confirms purchase** - Dismisses confirmation dialog if "Confirm" is enabled
+The macro can do up to two things per click:
 
-**One Action Per Click:**
+1. **Open one container** – If you have a tracked container in bags with "Open" enabled, it uses it first
+2. **Then buy one item** – If you're at a vendor, it buys the highest priority affordable item with "Buy" enabled
+3. **Confirm purchase** – Dismisses the confirmation dialog if "Confirm" is enabled
 
-- The macro can only execute one action (open OR buy) per click due to WoW limitations
-- **Color coding shows what will happen next:**
-  - **Blue highlight** = Next click will buy this item
-  - **Gold highlight** = Next click will open this item
-  - **Teal highlight** = Next click could do either (both actions available)
-- This is why you spam the macro - each click processes the next available action
+**Per-click behavior:**
+
+- On each click, the macro attempts to open one tracked container first, then buy one item if possible
+- **Color coding shows what will happen on the next click:**
+  - **Blue highlight** = Will buy (no container to open)
+  - **Gold highlight** = Will open (no affordable/eligible buy)
+  - **Teal highlight** = Will open and then buy (both actions available)
+- Spam the macro to process multiple opens/buys over successive clicks
 
 **Priority-Based Purchases:**
 
 - The macro buys the highest priority item you can afford from the current vendor
 - **Drag items to reorder** within each currency group to set priority
 - **Currency-aware grouping** - Items are grouped by their purchase currency; priority only matters within the same currency
-- If multiple currencies are available at a vendor, only items from one currency group will be purchased per click
-- Example: If tracking both Weathered and Carved crests at a transmutation vendor, the macro will only buy from whichever currency group has the highest priority item you can afford
+- If multiple currencies are available at a vendor, only one currency group will be purchased from per click
+- Example: Tracking both Weathered and Carved crests at a transmutation vendor will only buy from one currency group at a time (whichever has the highest priority affordable item)
 
 ## Commands
 
-Edit `core.lua` to update tracked items:
-
-```lua
-Addon.DEFAULT_SEED = {
-    240931, -- Item ID
-    240930, -- Item ID
-}
+```
+/cxh add <itemLink|itemID>  - Track an item
+/cxh list                   - Show tracked items
+/cxh show                   - Force show panel
+/cxh reset                  - Reset window position
+/cxh debug [on|off]         - Toggle debug mode
 ```
 
 ## License
