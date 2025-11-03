@@ -42,14 +42,33 @@ function Addon:IsDebugEnabled(category)
 end
 
 -- Print debug message for a specific category
-function Addon:DebugPrint(...)
-    if not self:IsDebugEnabled() then return end
-    print("|cff00ff00[CrestXmute]|r", ...)
+-- Internal helper to safely format messages; falls back to concatenation on format errors
+local function SafeFormat(fmt, ...)
+    if type(fmt) ~= "string" then
+        return tostring(fmt)
+    end
+    local argc = select('#', ...)
+    if argc == 0 then
+        return fmt
+    end
+    local ok, msg = pcall(string.format, fmt, ...)
+    if ok then return msg end
+    -- Fallback: concatenate args space-separated
+    local parts = { fmt }
+    for i = 1, argc do
+        parts[#parts + 1] = tostring(select(i, ...))
+    end
+    return table.concat(parts, " ")
 end
 
-function Addon:DebugPrintCategory(category, ...)
+function Addon:DebugPrint(fmt, ...)
+    if not self:IsDebugEnabled() then return end
+    print("|cff00ff00[CrestXmute]|r", SafeFormat(fmt, ...))
+end
+
+function Addon:DebugPrintCategory(category, fmt, ...)
     if not self:IsDebugEnabled(category) then return end
-    print("|cff00ff00[CrestXmute:" .. category .. "]|r", ...)
+    print("|cff00ff00[CrestXmute:" .. category .. "]|r", SafeFormat(fmt, ...))
 end
 
 -- Toggle debug for a category
