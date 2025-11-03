@@ -123,6 +123,9 @@ function Addon:RefreshList()
             end
         end
     end
+    if Addon.DEBUG then
+        print("[DEBUG] nextPurchaseID:", nextPurchaseID, "nextUseID:", nextUseID)
+    end
 
     local function makeRow(parent, yTop)
         rowDebugCount = rowDebugCount + 1
@@ -136,6 +139,7 @@ function Addon:RefreshList()
         -- Background highlight texture (for next-purchase/use indicator)
         f.highlight = f:CreateTexture(nil, "BACKGROUND")
         f.highlight:SetAllPoints()
+        f.highlight:SetDrawLayer("BACKGROUND", 1) -- Ensure it's above other background elements
         f.highlight:Hide()
 
         -- Icon (at the far left)
@@ -159,6 +163,12 @@ function Addon:RefreshList()
         f.buy:SetScale(CHECKBOX_SCALE)
         f.open:SetScale(CHECKBOX_SCALE)
         f.conf:SetScale(CHECKBOX_SCALE)
+
+        -- Set frame level to ensure they're visible above the background
+        local baseLevel = f:GetFrameLevel()
+        f.buy:SetFrameLevel(baseLevel + 2)
+        f.open:SetFrameLevel(baseLevel + 2)
+        f.conf:SetFrameLevel(baseLevel + 2)
 
         -- Programmatic, scale-aware X positions derived from header centers.
         -- Convert header centers to content/row space, then optionally apply scale correction and bias.
@@ -322,15 +332,15 @@ function Addon:RefreshList()
                 -- Both buy and use: Blend of blue + gold (additive)
                 -- Blue (0.2, 0.4, 0.8) + Gold (0.8, 0.6, 0.2) = (1.0, 1.0, 1.0) normalized to (0.5, 0.5, 0.5)
                 -- Using a teal/cyan blend: combines cool blue with warm gold
-                row.highlight:SetColorTexture(0.5, 0.7, 0.6, 0.20)
+                row.highlight:SetColorTexture(0.5, 0.7, 0.6, 0.35)
                 row.highlight:Show()
             elseif willBuy then
                 -- Will be purchased: Blue
-                row.highlight:SetColorTexture(0.2, 0.4, 0.8, 0.15)
+                row.highlight:SetColorTexture(0.2, 0.4, 0.8, 0.30)
                 row.highlight:Show()
             elseif willUse then
                 -- Will be used/opened: Gold/Orange
-                row.highlight:SetColorTexture(0.8, 0.6, 0.2, 0.15)
+                row.highlight:SetColorTexture(0.8, 0.6, 0.2, 0.30)
                 row.highlight:Show()
             else
                 row.highlight:Hide()

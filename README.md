@@ -51,7 +51,7 @@ The macro can do up to two things per click:
 **Per-click behavior:**
 
 - On each click, the macro attempts to open one tracked container first, then buy one item if possible
-- **Color coding shows what will happen on the next click:**
+- **Row highlighting shows what will happen on the next click:**
   - **Blue highlight** = Will buy (no container to open)
   - **Gold highlight** = Will open (no affordable/eligible buy)
   - **Teal highlight** = Will open and then buy (both actions available)

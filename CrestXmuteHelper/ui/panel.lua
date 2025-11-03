@@ -322,39 +322,6 @@ function Addon:EnsureUI()
     empty:SetText("No tracked items found on this vendor.\nUse /cxh add <linkOrID> or enable Add Mode.")
     container.EmptyState = empty; empty:Hide()
 
-    -- Color legend at the bottom
-    local legend = CreateFrame("Frame", nil, container)
-    legend:SetPoint("BOTTOMLEFT", 8, 4)
-    legend:SetPoint("BOTTOMRIGHT", -8, 4)
-    legend:SetHeight(16)
-
-    local function makeLegendItem(parent, prevItem, color, text)
-        local item = CreateFrame("Frame", nil, parent)
-        item:SetSize(12, 12)
-        if prevItem then
-            item:SetPoint("LEFT", prevItem, "RIGHT", 8, 0)
-        else
-            item:SetPoint("LEFT", 0, 0)
-        end
-
-        local box = item:CreateTexture(nil, "BACKGROUND")
-        box:SetAllPoints()
-        box:SetColorTexture(color[1], color[2], color[3], color[4])
-
-        local label = item:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        label:SetPoint("LEFT", item, "RIGHT", 4, 0)
-        label:SetText(text)
-        label:SetTextColor(0.8, 0.8, 0.8)
-
-        return item
-    end
-
-    local buy = makeLegendItem(legend, nil, { 0.2, 0.4, 0.8, 0.15 }, "Will Buy")
-    local use = makeLegendItem(legend, buy, { 0.8, 0.6, 0.2, 0.15 }, "Will Open")
-    local both = makeLegendItem(legend, use, { 0.5, 0.7, 0.6, 0.20 }, "Both")
-
-    container.Legend = legend
-
     self.Container = container
 end
 
