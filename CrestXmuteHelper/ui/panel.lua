@@ -303,7 +303,7 @@ function Addon:EnsureUI()
     container:SetScript("OnSizeChanged", function(self)
         -- Future: re-enable if panel becomes resizable
         -- ComputeColumns(self)
-        if Addon.RefreshList then Addon:RefreshList() end
+        if Addon.RefreshList and not Addon._isRefreshing then Addon:RefreshList() end
     end)
 
     -- Column headers placed at absolute X positions from ComputeColumns
