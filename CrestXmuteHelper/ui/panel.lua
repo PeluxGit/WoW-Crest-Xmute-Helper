@@ -30,28 +30,16 @@ local function ComputeColumns(container)
     }
 
     -- DEBUG: Log header calculation
-    if Addon.DebugPrintCategory then
-        Addon:DebugPrintCategory("positioning",
-            "[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
-            frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
-        Addon:DebugPrintCategory("positioning", "[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
-            afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
-        Addon:DebugPrintCategory("positioning", "[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
-            buyX, openX, confX, removeX)
-        Addon:DebugPrintCategory("positioning", "[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
-            container._colCenters[1], container._colCenters[2],
-            container._colCenters[3], container._colCenters[4])
-    else
-        Addon:DebugPrint("[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
-            frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
-        Addon:DebugPrint("[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
-            afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
-        Addon:DebugPrint("[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
-            buyX, openX, confX, removeX)
-        Addon:DebugPrint("[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
-            container._colCenters[1], container._colCenters[2],
-            container._colCenters[3], container._colCenters[4])
-    end
+    Addon:DebugPrintCategory("positioning",
+        "[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
+        frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
+    Addon:DebugPrintCategory("positioning", "[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
+        afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
+    Addon:DebugPrintCategory("positioning", "[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
+        buyX, openX, confX, removeX)
+    Addon:DebugPrintCategory("positioning", "[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
+        container._colCenters[1], container._colCenters[2],
+        container._colCenters[3], container._colCenters[4])
 end
 
 -- Make the container movable without stealing drags from the scroll area
@@ -88,13 +76,8 @@ local function MakeMovable(frame)
             relName = rel:GetName() or "UIParent"
         end
         CrestXmuteDB.framePos = { p, relName, rp, x, y }
-        if Addon.DebugPrintCategory then
-            Addon:DebugPrintCategory("ui", "[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName,
-                rp or "?", x or 0, y or 0)
-        else
-            Addon:DebugPrint("[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName, rp or "?",
-                x or 0, y or 0)
-        end
+        Addon:DebugPrintCategory("ui", "[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName,
+            rp or "?", x or 0, y or 0)
     end)
 end
 
@@ -102,11 +85,7 @@ end
 local function ApplySavedPosition(f)
     local pos = CrestXmuteDB and CrestXmuteDB.framePos
     if not pos or not pos[1] then
-        if Addon.DebugPrintCategory then
-            Addon:DebugPrintCategory("ui", "[LoadPosition] No saved position found")
-        else
-            Addon:DebugPrint("[LoadPosition] No saved position found")
-        end
+        Addon:DebugPrintCategory("ui", "[LoadPosition] No saved position found")
         return false
     end
 
@@ -114,23 +93,14 @@ local function ApplySavedPosition(f)
     local relName = pos[2] or "UIParent"
     local rel = _G[relName]
     if not rel then
-        if Addon.DebugPrintCategory then
-            Addon:DebugPrintCategory("ui", "[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
-        else
-            Addon:DebugPrint("[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
-        end
+        Addon:DebugPrintCategory("ui", "[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
         rel = UIParent
     end
 
     f:ClearAllPoints()
     f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
-    if Addon.DebugPrintCategory then
-        Addon:DebugPrintCategory("ui", "[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName,
-            pos[3], pos[4], pos[5])
-    else
-        Addon:DebugPrint("[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName, pos[3], pos[4],
-            pos[5])
-    end
+    Addon:DebugPrintCategory("ui", "[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName,
+        pos[3], pos[4], pos[5])
     return true
 end
 
@@ -322,17 +292,10 @@ function Addon:EnsureUI()
                     local containerLeft = container and container.GetLeft and container:GetLeft() or 0
                     local uiScale = container:GetEffectiveScale()
                     local screenCenterX = centerX * uiScale
-                    if Addon.DebugPrintCategory then
-                        Addon:DebugPrintCategory("positioning",
-                            "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
-                            name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale,
-                            screenCenterX)
-                    else
-                        Addon:DebugPrint(
-                            "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
-                            name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale,
-                            screenCenterX)
-                    end
+                    Addon:DebugPrintCategory("positioning",
+                        "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
+                        name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale,
+                        screenCenterX)
                 end
             end)
         end

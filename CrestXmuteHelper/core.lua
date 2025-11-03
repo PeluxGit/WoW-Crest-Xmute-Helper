@@ -15,26 +15,6 @@ function Addon:EnsureDebug()
     end
 end
 
--- Debug logging toggle (default off for release). Use /cxh debug on|off|toggle|status.
-Addon.DEBUG = false
-
--- Enable/disable debug logging at runtime
-function Addon:SetDebug(enabled)
-    CrestXmuteDB = CrestXmuteDB or {}; CrestXmuteDB.debug = CrestXmuteDB.debug or {}
-    CrestXmuteDB.debug.enabled = enabled and true or false
-    self.DEBUG = CrestXmuteDB.debug.enabled
-    local state = self.DEBUG and "enabled" or "disabled"
-    print("|cffffd200CrestXmute: Debug " .. state .. "|r")
-end
-
--- Query current debug state
-function Addon:IsDebug()
-    if CrestXmuteDB and CrestXmuteDB.debug then
-        return CrestXmuteDB.debug.enabled == true
-    end
-    return self.DEBUG == true
-end
-
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
 Addon.DEFAULT_SEED = {
@@ -128,25 +108,6 @@ function Addon:GetPrimaryCostKey(idx)
         end
     end
     return "misc", nil, nil
-end
-
-function Addon:DebugPrint(msg, ...)
-    if not self.DEBUG then return end
-    local argCount = select("#", ...)
-    if argCount > 0 then
-        if type(msg) == "string" then
-            local ok, formatted = pcall(string.format, msg, ...)
-            if ok then
-                print("|cff88ccffCrestXmute:", formatted)
-            else
-                print("|cff88ccffCrestXmute:", msg, ...)
-            end
-        else
-            print("|cff88ccffCrestXmute:", msg, ...)
-        end
-    else
-        print("|cff88ccffCrestXmute:", msg)
-    end
 end
 
 -- Public init

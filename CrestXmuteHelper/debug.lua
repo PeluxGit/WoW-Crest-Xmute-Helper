@@ -4,7 +4,6 @@ local ADDON_NAME, Addon = ...
 
 -- Default debug flags (can be overridden by saved variables)
 local DEFAULT_DEBUG = {
-    enabled = false,     -- Master debug toggle
     positioning = false, -- Log positioning calculations
     events = false,      -- Log event handling
     merchant = false,    -- Log merchant interactions
@@ -27,18 +26,13 @@ function Addon:InitDebug()
             CrestXmuteDB.debug[key] = value
         end
     end
-
-    self.DEBUG = CrestXmuteDB.debug.enabled
 end
 
 -- Check if a specific debug category is enabled
 function Addon:IsDebugEnabled(category)
     if not CrestXmuteDB or not CrestXmuteDB.debug then return false end
-    if not CrestXmuteDB.debug.enabled then return false end
-    if category then
-        return CrestXmuteDB.debug[category] == true
-    end
-    return true
+    if not category then return false end
+    return CrestXmuteDB.debug[category] == true
 end
 
 -- Print debug message for a specific category
@@ -61,11 +55,6 @@ local function SafeFormat(fmt, ...)
     return table.concat(parts, " ")
 end
 
-function Addon:DebugPrint(fmt, ...)
-    if not self:IsDebugEnabled() then return end
-    print("|cff00ff00[CrestXmute]|r", SafeFormat(fmt, ...))
-end
-
 function Addon:DebugPrintCategory(category, fmt, ...)
     if not self:IsDebugEnabled(category) then return end
     print("|cff00ff00[CrestXmute:" .. category .. "]|r", SafeFormat(fmt, ...))
@@ -76,12 +65,13 @@ function Addon:ToggleDebug(category)
     CrestXmuteDB = CrestXmuteDB or {}
     CrestXmuteDB.debug = CrestXmuteDB.debug or {}
 
-    if category == "all" or not category then
-        CrestXmuteDB.debug.enabled = not CrestXmuteDB.debug.enabled
-        self.DEBUG = CrestXmuteDB.debug.enabled
-        print("|cff00ff00[CrestXmute]|r Debug mode:",
-            CrestXmuteDB.debug.enabled and "|cff00ff00ENABLED|r" or "|cffff0000DISABLED|r")
-    elseif DEFAULT_DEBUG[category] ~= nil then
+    if not category or category == "" then
+        -- No category = show help
+        self:PrintDebugHelp()
+        return
+    end
+
+    if DEFAULT_DEBUG[category] ~= nil then
         CrestXmuteDB.debug[category] = not CrestXmuteDB.debug[category]
         print("|cff00ff00[CrestXmute]|r Debug category '" .. category .. "':",
             CrestXmuteDB.debug[category] and "|cff00ff00ENABLED|r" or "|cffff0000DISABLED|r")
@@ -99,28 +89,46 @@ function Addon:PrintDebugStatus()
     end
 
     print("|cff00ff00[CrestXmute]|r Debug Status:")
-    print("  Master:", CrestXmuteDB.debug.enabled and "|cff00ff00ON|r" or "|cffff0000OFF|r")
-
-    if CrestXmuteDB.debug.enabled then
-        for key, value in pairs(CrestXmuteDB.debug) do
-            if key ~= "enabled" then
-                print("  " .. key .. ":", value and "|cff00ff00ON|r" or "|cffff0000OFF|r")
-            end
+    local hasEnabled = false
+    for key, value in pairs(CrestXmuteDB.debug) do
+        if value then
+            print("  " .. key .. ": |cff00ff00ON|r")
+            hasEnabled = true
         end
+    end
+
+    if not hasEnabled then
+        print("  All categories: |cffff0000OFF|r")
     end
 end
 
 -- Print debug help
 function Addon:PrintDebugHelp()
     print("|cff00ff00[CrestXmute]|r Debug Commands:")
-    print("  /cxh debug - Toggle master debug")
-    print("  /cxh debug <category> - Toggle specific category")
-    print("  /cxh debug status - Show current debug state")
+    print("  |cffffd200/cxh debug|r - Show this help")
+    print("  |cffffd200/cxh debug <category>|r - Toggle specific category")
+    print("  |cffffd200/cxh debug status|r - Show current debug state")
     print("")
     print("Available categories:")
     for key in pairs(DEFAULT_DEBUG) do
-        if key ~= "enabled" then
-            print("  " .. key)
+        local desc = ""
+        if key == "positioning" then
+            desc = " - Log positioning calculations"
+        elseif key == "events" then
+            desc = " - Log event handling"
+        elseif key == "merchant" then
+            desc = " - Log merchant interactions"
+        elseif key == "bags" then
+            desc = " - Log bag scanning"
+        elseif key == "macro" then
+            desc = " - Log macro updates"
+        elseif key == "tracking" then
+            desc = " - Log item tracking changes"
+        elseif key == "ui" then
+            desc = " - Log UI operations"
+        elseif key == "skin" then
+            desc = " - Force default skin (disable ElvUI)"
         end
+        print("  |cffffd200" .. key .. "|r" .. desc)
     end
 end
