@@ -1,0 +1,31 @@
+name: Release Addon Zip
+
+on:
+    release:
+        types: [published]
+
+jobs:
+    build-and-attach:
+        name: Build zip and attach to release
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # required for uploading assets to the release
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Create addon zip
+              run: |
+                  set -euxo pipefail
+                  ZIP_NAME="CrestXmuteHelper-${{ github.ref_name }}.zip"
+                  # Zip the top-level addon folder so the zip contains CrestXmuteHelper/ at its root
+                  zip -r "$ZIP_NAME" CrestXmuteHelper
+                  ls -lah "$ZIP_NAME"
+
+            - name: Upload asset to release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: |
+                      CrestXmuteHelper-${{ github.ref_name }}.zip
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
