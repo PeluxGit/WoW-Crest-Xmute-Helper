@@ -19,14 +19,15 @@ UI.REMOVE_PAD           = 20  -- Space before remove button (extra gap from Conf
 UI.SCROLLBAR_RESERVE    = 30  -- Dummy padding after Remove so scrollbar overlaps this space, not the button
 
 UI.CHECKBOX_SCALE       = 0.7
+UI.ADDMODE_SCALE        = 0.9
 UI.REMOVE_SCALE         = 0.7
 
 -- Fallback absolute X positions in row space (CENTER-to-LEFT anchor)
 -- These reproduce the empirically tuned look if measurement/scaling is unavailable
-UI.X_BUY                = 460
-UI.X_OPEN               = 530
-UI.X_CONF               = 600
-UI.X_REMOVE             = 750
+UI.X_BUY                = 320
+UI.X_OPEN               = 370
+UI.X_CONF               = 420
+UI.X_REMOVE             = 480
 
 -- ===== Small helpers (used by list.lua) =====
 

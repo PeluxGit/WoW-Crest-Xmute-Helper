@@ -21,17 +21,40 @@ SlashCmdList.CRESTXMUTE = function(msg)
     elseif cmd == "debug" then
         local arg = (rest or ""):lower()
         if arg == "on" then
-            if Addon.SetDebug then Addon:SetDebug(true) end
+            CrestXmuteDB = CrestXmuteDB or {}; CrestXmuteDB.debug = CrestXmuteDB.debug or {}
+            CrestXmuteDB.debug.enabled = true
+            if Addon.PrintDebugStatus then Addon:PrintDebugStatus() else print("|cffffd200CrestXmute: Debug enabled|r") end
         elseif arg == "off" then
-            if Addon.SetDebug then Addon:SetDebug(false) end
+            CrestXmuteDB = CrestXmuteDB or {}; CrestXmuteDB.debug = CrestXmuteDB.debug or {}
+            CrestXmuteDB.debug.enabled = false
+            if Addon.PrintDebugStatus then Addon:PrintDebugStatus() else print("|cffffd200CrestXmute: Debug disabled|r") end
         elseif arg == "status" then
-            local state = (Addon and Addon:IsDebug() and "enabled") or "disabled"
-            print("|cffffd200CrestXmute: Debug " .. state .. "|r")
+            if Addon.PrintDebugStatus then
+                Addon:PrintDebugStatus()
+            else
+                local state = (Addon and Addon:IsDebug() and "enabled") or "disabled"
+                print("|cffffd200CrestXmute: Debug " .. state .. "|r")
+            end
+        elseif arg == "help" then
+            if Addon.PrintDebugHelp then
+                Addon:PrintDebugHelp()
+            else
+                print("|cffffd200CrestXmute|r usage: /cxh debug [on|off|status|help|<category>]")
+            end
         elseif arg == "" then
-            -- No argument = toggle
-            if Addon.SetDebug and Addon.IsDebug then Addon:SetDebug(not Addon:IsDebug()) end
+            -- No argument = toggle master debug
+            if Addon.ToggleDebug then
+                Addon:ToggleDebug()
+            elseif Addon.SetDebug and Addon.IsDebug then
+                Addon:SetDebug(not Addon:IsDebug())
+            end
         else
-            print("|cffffd200CrestXmute|r usage: /cxh debug [on|off|status]")
+            -- Category-specific toggle
+            if Addon.ToggleDebug then
+                Addon:ToggleDebug(arg)
+            else
+                print("|cffffd200CrestXmute|r usage: /cxh debug [on|off|status|help|<category>]")
+            end
         end
     elseif cmd == "show" or cmd == "open" then
         if Addon.ShowUIForMerchant then
@@ -56,7 +79,7 @@ SlashCmdList.CRESTXMUTE = function(msg)
         print("|cffffd200CrestXmute|r commands:")
         print("  /cxh add <itemLink|itemID>")
         print("  /cxh list")
-        print("  /cxh debug [on|off|status]  (no arg = toggle)")
+        print("  /cxh debug [on|off|status|help|<category>]")
         print("  /cxh show")
         print("  /cxh reset - Reset window position")
     end

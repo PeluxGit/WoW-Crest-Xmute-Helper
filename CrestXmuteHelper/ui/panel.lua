@@ -30,15 +30,28 @@ local function ComputeColumns(container)
     }
 
     -- DEBUG: Log header calculation
-    Addon:DebugPrint("[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
-        frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
-    Addon:DebugPrint("[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
-        afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
-    Addon:DebugPrint("[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
-        buyX, openX, confX, removeX)
-    Addon:DebugPrint("[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
-        container._colCenters[1], container._colCenters[2],
-        container._colCenters[3], container._colCenters[4])
+    if Addon.DebugPrintCategory then
+        Addon:DebugPrintCategory("positioning",
+            "[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
+            frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
+        Addon:DebugPrintCategory("positioning", "[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
+            afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
+        Addon:DebugPrintCategory("positioning", "[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
+            buyX, openX, confX, removeX)
+        Addon:DebugPrintCategory("positioning", "[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
+            container._colCenters[1], container._colCenters[2],
+            container._colCenters[3], container._colCenters[4])
+    else
+        Addon:DebugPrint("[HEADER] frameInset=%d, CONTENT_PAD=%d, LEFT_PAD=%d, ICON_W=%d, ICON_PAD=%d, NAME_COL_W=%d",
+            frameInset, UI.CONTENT_PAD, UI.LEFT_PAD, UI.ICON_W, UI.ICON_PAD, UI.NAME_COL_W)
+        Addon:DebugPrint("[HEADER] afterName=%d, COL_SP=%d, COL_W=%d, REMOVE_PAD=%d",
+            afterName, UI.COL_SP, UI.COL_W, UI.REMOVE_PAD)
+        Addon:DebugPrint("[HEADER] colsX: buy=%d, open=%d, conf=%d, remove=%d",
+            buyX, openX, confX, removeX)
+        Addon:DebugPrint("[HEADER] colCenters: buy=%d, open=%d, conf=%d, remove=%d",
+            container._colCenters[1], container._colCenters[2],
+            container._colCenters[3], container._colCenters[4])
+    end
 end
 
 -- Make the container movable without stealing drags from the scroll area
@@ -75,8 +88,13 @@ local function MakeMovable(frame)
             relName = rel:GetName() or "UIParent"
         end
         CrestXmuteDB.framePos = { p, relName, rp, x, y }
-        Addon:DebugPrint("[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName, rp or "?", x or 0,
-            y or 0)
+        if Addon.DebugPrintCategory then
+            Addon:DebugPrintCategory("ui", "[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName,
+                rp or "?", x or 0, y or 0)
+        else
+            Addon:DebugPrint("[SavePosition] Saved position: %s, %s, %s, %.1f, %.1f", p or "?", relName, rp or "?",
+                x or 0, y or 0)
+        end
     end)
 end
 
@@ -84,7 +102,11 @@ end
 local function ApplySavedPosition(f)
     local pos = CrestXmuteDB and CrestXmuteDB.framePos
     if not pos or not pos[1] then
-        Addon:DebugPrint("[LoadPosition] No saved position found")
+        if Addon.DebugPrintCategory then
+            Addon:DebugPrintCategory("ui", "[LoadPosition] No saved position found")
+        else
+            Addon:DebugPrint("[LoadPosition] No saved position found")
+        end
         return false
     end
 
@@ -92,13 +114,23 @@ local function ApplySavedPosition(f)
     local relName = pos[2] or "UIParent"
     local rel = _G[relName]
     if not rel then
-        Addon:DebugPrint("[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
+        if Addon.DebugPrintCategory then
+            Addon:DebugPrintCategory("ui", "[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
+        else
+            Addon:DebugPrint("[LoadPosition] Relative frame '%s' not found, using UIParent", relName)
+        end
         rel = UIParent
     end
 
     f:ClearAllPoints()
     f:SetPoint(pos[1], rel, pos[3], pos[4], pos[5])
-    Addon:DebugPrint("[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName, pos[3], pos[4], pos[5])
+    if Addon.DebugPrintCategory then
+        Addon:DebugPrintCategory("ui", "[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName,
+            pos[3], pos[4], pos[5])
+    else
+        Addon:DebugPrint("[LoadPosition] Restored position: %s, %s, %s, %.1f, %.1f", pos[1], relName, pos[3], pos[4],
+            pos[5])
+    end
     return true
 end
 
@@ -216,9 +248,9 @@ function Addon:EnsureUI()
 
     -- Create a button that picks up the macro when clicked
     local macroBtn = CreateFrame("Button", nil, container)
-    macroBtn:SetSize(36, 36)
+    macroBtn:SetSize(22, 22)
     macroBtn:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
-    macroBtn:SetNormalTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+    macroBtn:SetNormalTexture("Interface\\Icons\\INV_Misc_Bag_10_Black")
     macroBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
     macroBtn:SetScript("OnClick", function()
         local macroIndex = GetMacroIndexByName("CrestX-Open")
@@ -239,7 +271,7 @@ function Addon:EnsureUI()
     container.MacroBtn = macroBtn
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
-    addMode:SetScale(0.9)
+    addMode:SetScale(UI.ADDMODE_SCALE or 0.9)
     addMode:SetPoint("RIGHT", macroBtn, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -256,6 +288,11 @@ function Addon:EnsureUI()
     local content = CreateFrame("Frame", nil, scroll)
     content:SetSize(1, 1)
     scroll:SetScrollChild(content)
+
+    -- Set explicit frame levels for proper rendering order
+    local containerLevel = container:GetFrameLevel() or 1
+    scroll:SetFrameLevel(containerLevel + 1)
+    content:SetFrameLevel(containerLevel + 2)
 
     container.Scroll   = scroll
     container.Content  = content
@@ -277,7 +314,7 @@ function Addon:EnsureUI()
         fs:SetPoint("TOPLEFT", container, "TOPLEFT", absX, -32)
 
         -- DEBUG: Log header placement AND actual measured positions
-        if Addon and Addon.IsDebug and Addon:IsDebug() then
+        if Addon and Addon.IsDebugEnabled and Addon:IsDebugEnabled("positioning") then
             C_Timer.After(0.02, function()
                 if fs.GetCenter and fs.GetLeft then
                     local centerX = fs:GetCenter()
@@ -285,9 +322,17 @@ function Addon:EnsureUI()
                     local containerLeft = container and container.GetLeft and container:GetLeft() or 0
                     local uiScale = container:GetEffectiveScale()
                     local screenCenterX = centerX * uiScale
-                    Addon:DebugPrint(
-                        "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
-                        name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale, screenCenterX)
+                    if Addon.DebugPrintCategory then
+                        Addon:DebugPrintCategory("positioning",
+                            "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
+                            name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale,
+                            screenCenterX)
+                    else
+                        Addon:DebugPrint(
+                            "[HEADER] %s: absX=%d, width=%d, actualCenter=%.1f, actualLeft=%.1f, containerLeft=%.1f, uiScale=%.2f, screenX=%.1f",
+                            name or "?", absX, UI.COL_W, centerX or -1, leftX or -1, containerLeft, uiScale,
+                            screenCenterX)
+                    end
                 end
             end)
         end

@@ -5,6 +5,7 @@
 ## Version: 1.0.0
 ## SavedVariables: CrestXmuteDB
 
+debug.lua
 core.lua
 merchant.lua
 bags.lua
@@ -14,4 +15,5 @@ macro.lua
 ui/layout.lua
 ui/panel.lua
 ui/list.lua
+ui/elvui_skin.lua
 slash.lua

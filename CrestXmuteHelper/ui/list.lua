@@ -123,8 +123,9 @@ function Addon:RefreshList()
             end
         end
     end
-    if Addon.DEBUG then
-        print("[DEBUG] nextPurchaseID:", nextPurchaseID, "nextUseID:", nextUseID)
+    if Addon.DebugPrintCategory then
+        Addon:DebugPrintCategory("positioning", "[NEXT] willBuy=%s, willUse=%s",
+            tostring(nextPurchaseID or "nil"), tostring(nextUseID or "nil"))
     end
 
     local function makeRow(parent, yTop)
@@ -136,10 +137,15 @@ function Addon:RefreshList()
         f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -yTop)
         f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
 
+        -- Set explicit frame level to ensure proper rendering order
+        local parentLevel = parent:GetFrameLevel() or 1
+        f:SetFrameLevel(parentLevel + 1)
+
         -- Background highlight texture (for next-purchase/use indicator)
-        f.highlight = f:CreateTexture(nil, "BACKGROUND")
+        f.highlight = f:CreateTexture(nil, "ARTWORK")
         f.highlight:SetAllPoints()
-        f.highlight:SetDrawLayer("BACKGROUND", 1) -- Ensure it's above other background elements
+        f.highlight:SetDrawLayer("ARTWORK", 0) -- Ensure highlight is visible above row background
+        f.highlight:SetVertexColor(1, 1, 1, 1) -- Ensure full opacity
         f.highlight:Hide()
 
         -- Icon (at the far left)
@@ -156,6 +162,11 @@ function Addon:RefreshList()
 
         -- Create checkboxes - anchor each to the previous element, just like icon→name
         local CHECKBOX_SCALE = UI.CHECKBOX_SCALE or 0.7
+        -- If ElvUI has set an effective scale (via _effectiveCheckboxScale), use that instead
+        if container._effectiveCheckboxScale then
+            CHECKBOX_SCALE = container._effectiveCheckboxScale
+        end
+
         f.buy = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
         f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
         f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
@@ -170,41 +181,26 @@ function Addon:RefreshList()
         f.open:SetFrameLevel(baseLevel + 2)
         f.conf:SetFrameLevel(baseLevel + 2)
 
-        -- Programmatic, scale-aware X positions derived from header centers.
-        -- Convert header centers to content/row space, then optionally apply scale correction and bias.
-        local contentLeft   = (content and content.GetLeft and content:GetLeft()) or 0
-        local containerLeft = (container and container.GetLeft and container:GetLeft()) or 0
-        local buyCX         = container._hdrBuy and select(1, container._hdrBuy:GetCenter()) or nil
-        local openCX        = container._hdrOpen and select(1, container._hdrOpen:GetCenter()) or nil
-        local confCX        = container._hdrConf and select(1, container._hdrConf:GetCenter()) or nil
-        local baseBuyX      = buyCX and (buyCX - contentLeft) or nil
-        local baseOpenX     = openCX and (openCX - contentLeft) or nil
-        local baseConfX     = confCX and (confCX - contentLeft) or nil
-        local centers       = container and container._colCenters
-        local baseRemX      = centers and ((centers[4] + containerLeft) - contentLeft) or nil
+        -- Explicitly show checkboxes (CreateFrame creates them hidden by default)
+        f.buy:Show()
+        f.open:Show()
+        f.conf:Show()
 
-        local childScale    = f.buy:GetScale() or 1
-        -- Always apply a scale-aware correction so visual spacing remains consistent
-        local scaleCorr     = 1 / (childScale ~= 0 and childScale or 1)
+        -- Column X positions derived from ComputeColumns (container space) converted to row space
+        local offset   = (container._insetLeft or 0) + (UI.CONTENT_PAD or 0)
+        local centers  = container._colCenters or {}
+        local X_BUY    = (centers[1] and (centers[1] - offset)) or (UI.COL_SECTION_X + UI.COL_SP + UI.COL_W * 0.5)
+        local X_OPEN   = (centers[2] and (centers[2] - offset)) or (X_BUY + UI.COL_W + UI.COL_SP)
+        local X_CONF   = (centers[3] and (centers[3] - offset)) or (X_OPEN + UI.COL_W + UI.COL_SP)
+        local X_REM    = (centers[4] and (centers[4] - offset)) or (X_CONF + UI.COL_W + UI.REMOVE_PAD)
+        -- Nudge remove left a bit to avoid scrollbar overlap
+        local X_REMOVE = X_REM - ((UI.SCROLLBAR_RESERVE or 30) * 0.5)
 
-        local function applyCheckbox(x)
-            return x and (scaleCorr * x) or nil
-        end
-
-        -- Checkboxes: scale-aware; Remove: derive from Confirm delta, also scale-aware
-        local X_BUY    = applyCheckbox(baseBuyX) or (UI.X_BUY or 460)
-        local X_OPEN   = applyCheckbox(baseOpenX) or (UI.X_OPEN or 530)
-        local X_CONF   = applyCheckbox(baseConfX) or (UI.X_CONF or 600)
-
-        -- Remove: scale-aware + shift left by scrollbar reserve to stay visible when scrollbar appears
-        local X_REMOVE = applyCheckbox(baseRemX) or (UI.X_REMOVE or 765)
-        X_REMOVE       = X_REMOVE - (UI.SCROLLBAR_RESERVE or 24)
-
-        if rowDebugCount == 1 then
-            Addon:DebugPrint(
-                "[X-FORMULA] (always scale-aware) childScale=%.3f, scaleCorr=%.3f, base(b/o/c/r)=%.1f/%.1f/%.1f/%.1f -> X=%.1f/%.1f/%.1f/%.1f",
-                childScale, scaleCorr, baseBuyX or -1, baseOpenX or -1, baseConfX or -1,
-                (centers and ((centers[4] + containerLeft) - contentLeft)) or -1,
+        if rowDebugCount == 1 and Addon.DebugPrintCategory then
+            Addon:DebugPrintCategory("positioning",
+                "[X-COLUMNS] offset=%.1f, centers(b/o/c/r)=%s/%s/%s/%s, X(b/o/c/r)=%.1f/%.1f/%.1f/%.1f",
+                offset,
+                tostring(centers[1]), tostring(centers[2]), tostring(centers[3]), tostring(centers[4]),
                 X_BUY, X_OPEN, X_CONF, X_REMOVE)
         end
 
@@ -212,9 +208,10 @@ function Addon:RefreshList()
         f.open:SetPoint("CENTER", f, "LEFT", X_OPEN, 0)
         f.conf:SetPoint("CENTER", f, "LEFT", X_CONF, 0)
 
-        -- Remove button
+        -- Remove button aligned to its column center
         f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
         f.remove:SetScale(UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+        f.remove:ClearAllPoints()
         f.remove:SetPoint("CENTER", f, "LEFT", X_REMOVE, 0)
         f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
 
@@ -324,6 +321,13 @@ function Addon:RefreshList()
             local tog = Addon:GetItemToggles(e.itemID)
             row.buy:SetChecked(tog.buy); row.open:SetChecked(tog.open); row.conf:SetChecked(tog.confirm)
 
+            -- Force checkbox visual update on next frame (fixes invisible checkboxes on first show)
+            C_Timer.After(0, function()
+                if row.buy then row.buy:SetChecked(tog.buy) end
+                if row.open then row.open:SetChecked(tog.open) end
+                if row.conf then row.conf:SetChecked(tog.confirm) end
+            end)
+
             -- Highlight this row based on what action will happen next
             local willBuy = (nextPurchaseID and e.itemID == nextPurchaseID)
             local willUse = (nextUseID and e.itemID == nextUseID)
@@ -334,14 +338,26 @@ function Addon:RefreshList()
                 -- Using a teal/cyan blend: combines cool blue with warm gold
                 row.highlight:SetColorTexture(0.5, 0.7, 0.6, 0.35)
                 row.highlight:Show()
+                -- Force visual update on next frame
+                C_Timer.After(0, function()
+                    if row.highlight then row.highlight:Show() end
+                end)
             elseif willBuy then
                 -- Will be purchased: Blue
                 row.highlight:SetColorTexture(0.2, 0.4, 0.8, 0.30)
                 row.highlight:Show()
+                -- Force visual update on next frame
+                C_Timer.After(0, function()
+                    if row.highlight then row.highlight:Show() end
+                end)
             elseif willUse then
                 -- Will be used/opened: Gold/Orange
                 row.highlight:SetColorTexture(0.8, 0.6, 0.2, 0.30)
                 row.highlight:Show()
+                -- Force visual update on next frame
+                C_Timer.After(0, function()
+                    if row.highlight then row.highlight:Show() end
+                end)
             else
                 row.highlight:Hide()
             end

@@ -8,18 +8,30 @@ end
 -- SavedVariables
 CrestXmuteDB = CrestXmuteDB or {}
 
+-- Initialize debug system from saved state
+function Addon:EnsureDebug()
+    if self.InitDebug then
+        self:InitDebug()
+    end
+end
+
 -- Debug logging toggle (default off for release). Use /cxh debug on|off|toggle|status.
 Addon.DEBUG = false
 
 -- Enable/disable debug logging at runtime
 function Addon:SetDebug(enabled)
-    self.DEBUG = enabled and true or false
+    CrestXmuteDB = CrestXmuteDB or {}; CrestXmuteDB.debug = CrestXmuteDB.debug or {}
+    CrestXmuteDB.debug.enabled = enabled and true or false
+    self.DEBUG = CrestXmuteDB.debug.enabled
     local state = self.DEBUG and "enabled" or "disabled"
     print("|cffffd200CrestXmute: Debug " .. state .. "|r")
 end
 
 -- Query current debug state
 function Addon:IsDebug()
+    if CrestXmuteDB and CrestXmuteDB.debug then
+        return CrestXmuteDB.debug.enabled == true
+    end
     return self.DEBUG == true
 end
 

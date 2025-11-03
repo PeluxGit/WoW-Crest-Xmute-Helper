@@ -59,6 +59,7 @@ end
 f:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
         if Addon.Init then Addon:Init() end
+        if Addon.EnsureDebug then Addon:EnsureDebug() end
         self:UnregisterEvent("ADDON_LOADED")
         return
     end
