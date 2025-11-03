@@ -1,6 +1,11 @@
 -- ui/elvui_skin.lua
 -- ElvUI skin integration for Crest Xmute Helper
 local ADDON_NAME, Addon = ...
+-- WoW API globals referenced in this module (accessed via _G for static analysis friendliness)
+local _G = _G
+local hooksecurefunc = _G.hooksecurefunc
+local ElvUI = _G.ElvUI
+local unpack = _G.unpack
 
 -- ElvUI-specific scale multipliers (relative to base UI constants)
 local ELVUI_ADDMODE_SCALE_MULT = 0.83  -- Add Mode checkbox: 0.75 / 0.9 base
@@ -35,11 +40,38 @@ local function ApplyElvUISkin()
         if S.HandleFrame then
             S:HandleFrame(container, false, true)
         end
+        -- Apply ElvUI's Transparent template to match their style (reduced opacity backdrop)
+        if container.SetTemplate then
+            container:SetTemplate("Transparent")
+        end
+        -- Ensure we use ElvUI's configured fade/backdrop colors (less opaque than Default)
+        if E and E.media then
+            local fade = E.media.backdropfadecolor or { 0.06, 0.06, 0.06, 0.8 }
+            local brdr = E.media.bordercolor or { 0, 0, 0 }
+            if container.SetBackdropColor then
+                container:SetBackdropColor(fade[1], fade[2], fade[3], fade[4] or 0.8)
+            end
+            if container.SetBackdropBorderColor then
+                container:SetBackdropBorderColor(brdr[1], brdr[2], brdr[3], 1)
+            end
+            if container.backdrop then
+                if container.backdrop.SetBackdropColor then
+                    container.backdrop:SetBackdropColor(fade[1], fade[2], fade[3], fade[4] or 0.8)
+                end
+                if container.backdrop.SetBackdropBorderColor then
+                    container.backdrop:SetBackdropBorderColor(brdr[1], brdr[2], brdr[3], 1)
+                end
+            end
+        end
 
         -- Skin the scroll frame and scrollbar
         if container.Scroll then
             if S.HandleScrollBar then
                 S:HandleScrollBar(container.Scroll.ScrollBar)
+            end
+            -- If ElvUI template helpers exist, apply Transparent to scroll container too
+            if container.Scroll.SetTemplate then
+                container.Scroll:SetTemplate("Transparent")
             end
         end
 
@@ -67,6 +99,12 @@ local function ApplyElvUISkin()
             -- Scale down for ElvUI relative to base ADDMODE_SCALE
             local baseScale = UI.ADDMODE_SCALE or 0.9
             container.AddModeBtn:SetScale(baseScale * ELVUI_ADDMODE_SCALE_MULT)
+            -- Only set background color for unchecked state
+            if container.AddModeBtn.backdrop then
+                local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                container.AddModeBtn.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                    backdropColor[4] or 1)
+            end
         end
 
         -- Store the effective checkbox scale for positioning calculations
@@ -89,6 +127,12 @@ local function ApplyElvUISkin()
                     -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                     local baseScale = UI.CHECKBOX_SCALE or 0.7
                     cell.buy:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                    -- Only set background color for unchecked state
+                    if cell.buy.backdrop then
+                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                        cell.buy.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                            backdropColor[4] or 1)
+                    end
                     cell.buy._elvuiSkinned = true
                 end
             end
@@ -98,6 +142,12 @@ local function ApplyElvUISkin()
                     -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                     local baseScale = UI.CHECKBOX_SCALE or 0.7
                     cell.open:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                    -- Only set background color for unchecked state
+                    if cell.open.backdrop then
+                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                        cell.open.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                            backdropColor[4] or 1)
+                    end
                     cell.open._elvuiSkinned = true
                 end
             end
@@ -107,6 +157,12 @@ local function ApplyElvUISkin()
                     -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                     local baseScale = UI.CHECKBOX_SCALE or 0.7
                     cell.conf:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                    -- Only set background color for unchecked state
+                    if cell.conf.backdrop then
+                        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                        cell.conf.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
+                            backdropColor[4] or 1)
+                    end
                     cell.conf._elvuiSkinned = true
                 end
             end
