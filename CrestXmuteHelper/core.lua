@@ -18,9 +18,9 @@ end
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
 Addon.DEFAULT_SEED = {
-    240931, -- Example: Aspect's Crest Pack
-    240930, -- Example: Wyrm's Crest Pack
-    240929, -- Example: Drake's Crest Pack
+    240931,
+    240930,
+    240929,
 }
 
 -- Defaults + schema (all user data under .user)
