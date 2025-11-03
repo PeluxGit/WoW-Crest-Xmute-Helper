@@ -142,10 +142,11 @@ function Addon:RefreshList()
         f:SetFrameLevel(parentLevel + 1)
 
         -- Background highlight texture (for next-purchase/use indicator)
-        f.highlight = f:CreateTexture(nil, "ARTWORK")
+        -- Place on BACKGROUND so it sits beneath icon and name
+        f.highlight = f:CreateTexture(nil, "BACKGROUND")
         f.highlight:SetAllPoints()
-        f.highlight:SetDrawLayer("ARTWORK", 0) -- Ensure highlight is visible above row background
-        f.highlight:SetVertexColor(1, 1, 1, 1) -- Ensure full opacity
+        f.highlight:SetDrawLayer("BACKGROUND", 0)
+        f.highlight:SetVertexColor(1, 1, 1, 1)
         f.highlight:Hide()
 
         -- Icon (at the far left)
@@ -186,34 +187,78 @@ function Addon:RefreshList()
         f.open:Show()
         f.conf:Show()
 
+        -- Prepare remove button early so its scale can be accounted for in X positioning
+        if not f.remove then
+            f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
+            f.remove:SetScale(UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+            f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
+        end
+
         -- Column X positions derived from ComputeColumns (container space) converted to row space
-        local offset   = (container._insetLeft or 0) + (UI.CONTENT_PAD or 0)
-        local centers  = container._colCenters or {}
-        local X_BUY    = (centers[1] and (centers[1] - offset)) or (UI.COL_SECTION_X + UI.COL_SP + UI.COL_W * 0.5)
-        local X_OPEN   = (centers[2] and (centers[2] - offset)) or (X_BUY + UI.COL_W + UI.COL_SP)
-        local X_CONF   = (centers[3] and (centers[3] - offset)) or (X_OPEN + UI.COL_W + UI.COL_SP)
-        local X_REM    = (centers[4] and (centers[4] - offset)) or (X_CONF + UI.COL_W + UI.REMOVE_PAD)
-        -- Nudge remove left a bit to avoid scrollbar overlap
-        local X_REMOVE = X_REM - ((UI.SCROLLBAR_RESERVE or 30) * 0.5)
+        -- Prefer actual runtime offset between content and container (more reliable than static insets)
+        local contentLeft   = parent and parent.GetLeft and (parent:GetLeft() or 0) or 0
+        local containerLeft = container and container.GetLeft and (container:GetLeft() or 0) or 0
+        local offsetActual  = contentLeft - containerLeft
+        local offsetStatic  = (container._insetLeft or 0) + (UI.CONTENT_PAD or 0)
+        local offset        = (math.abs(offsetActual) > 0.0001) and offsetActual or offsetStatic
+        local centers       = container._colCenters or {}
+
+        -- Raw positions in row-space (parent coordinates)
+        local RAW_BUY       = (centers[1] and (centers[1] - offset)) or (UI.COL_SECTION_X + UI.COL_SP + UI.COL_W * 0.5)
+        local RAW_OPEN      = (centers[2] and (centers[2] - offset)) or (RAW_BUY + UI.COL_W + UI.COL_SP)
+        local RAW_CONF      = (centers[3] and (centers[3] - offset)) or (RAW_OPEN + UI.COL_W + UI.COL_SP)
+        local RAW_REM       = (centers[4] and (centers[4] - offset)) or (RAW_CONF + UI.COL_W + UI.REMOVE_PAD)
+
+        -- Apply scale-aware correction so visual centers align regardless of child scale
+        local cbScale       = f.buy:GetScale() or CHECKBOX_SCALE or 1
+        if cbScale == 0 then cbScale = 1 end
+        local cbCorr  = 1 / cbScale
+
+        local rmScale = (f.remove and f.remove:GetScale()) or (UI.REMOVE_SCALE or cbScale)
+        if rmScale == 0 then rmScale = 1 end
+        local rmCorr   = 1 / rmScale
+
+        local X_BUY    = cbCorr * RAW_BUY
+        local X_OPEN   = cbCorr * RAW_OPEN
+        local X_CONF   = cbCorr * RAW_CONF
+        local X_REM    = rmCorr * RAW_REM
+        -- Nudge remove left to avoid scrollbar overlap (use full reserve in parent space)
+        local X_REMOVE = X_REM - (UI.SCROLLBAR_RESERVE or 30)
 
         if rowDebugCount == 1 and Addon.DebugPrintCategory then
             Addon:DebugPrintCategory("positioning",
-                "[X-COLUMNS] offset=%.1f, centers(b/o/c/r)=%s/%s/%s/%s, X(b/o/c/r)=%.1f/%.1f/%.1f/%.1f",
-                offset,
+                "[X-COLUMNS] offset=%.1f (actual=%.1f, static=%.1f) cbScale=%.3f cbCorr=%.3f rmScale=%.3f rmCorr=%.3f centers=%s/%s/%s/%s RAW=%.1f/%.1f/%.1f/%.1f X=%.1f/%.1f/%.1f/%.1f",
+                offset, offsetActual, offsetStatic, cbScale, cbCorr, rmScale, rmCorr,
                 tostring(centers[1]), tostring(centers[2]), tostring(centers[3]), tostring(centers[4]),
-                X_BUY, X_OPEN, X_CONF, X_REMOVE)
+                RAW_BUY, RAW_OPEN, RAW_CONF, RAW_REM, X_BUY, X_OPEN, X_CONF, X_REMOVE)
+            -- On next frame, measure actual screen-space centers to verify alignment vs headers
+            C_Timer.After(0, function()
+                if not (f.buy and f.open and f.conf and container and container._hdrBuy) then return end
+                local bcx = select(1, f.buy:GetCenter()) or -1
+                local ocx = select(1, f.open:GetCenter()) or -1
+                local ccx = select(1, f.conf:GetCenter()) or -1
+                local rmx = (f.remove and select(1, f.remove:GetCenter())) or -1
+                local hbx = select(1, container._hdrBuy:GetCenter()) or -1
+                local hox = select(1, container._hdrOpen:GetCenter()) or -1
+                local hcx = select(1, container._hdrConf:GetCenter()) or -1
+                local rowLeft = f:GetLeft() or -1
+                local contLeft = container:GetLeft() or -1
+                local contScale = container:GetEffectiveScale() or 1
+                local expectedRemScreen = ((contLeft + (centers[4] or 0)) * contScale)
+                Addon:DebugPrintCategory("positioning",
+                    "[MEASURE] row(b/o/c)=%.1f/%.1f/%.1f vs hdr=%.1f/%.1f/%.1f | delta=%.1f/%.1f/%.1f | remove row=%.1f exp=%.1f | left(row/cont)=%.1f/%.1f uiScale=%.2f cbScale=%.3f rmScale=%.3f",
+                    bcx, ocx, ccx, hbx, hox, hcx, (bcx - hbx), (ocx - hox), (ccx - hcx), rmx, expectedRemScreen, rowLeft,
+                    contLeft, contScale, cbScale, rmScale)
+            end)
         end
 
         f.buy:SetPoint("CENTER", f, "LEFT", X_BUY, 0)
         f.open:SetPoint("CENTER", f, "LEFT", X_OPEN, 0)
         f.conf:SetPoint("CENTER", f, "LEFT", X_CONF, 0)
 
-        -- Remove button aligned to its column center
-        f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
-        f.remove:SetScale(UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+        -- Remove button aligned to its column center (already created above)
         f.remove:ClearAllPoints()
         f.remove:SetPoint("CENTER", f, "LEFT", X_REMOVE, 0)
-        f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
 
         -- Transparent drag zone (only covers icon + name area)
         f.dragZone = CreateFrame("Frame", nil, f)
