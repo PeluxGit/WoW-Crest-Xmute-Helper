@@ -3,6 +3,13 @@ name: Release Addon
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      skip_publish:
+        description: 'Skip publishing to CurseForge/Wago (only create zip)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-publish:
@@ -29,6 +36,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to CurseForge and Wago
+        if: ${{ !inputs.skip_publish && !github.event.release.prerelease }}
         uses: BigWigsMods/packager@v2
         env:
           CF_API_KEY: ${{ secrets.CURSEFORGE_TOKEN }}
