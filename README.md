@@ -4,7 +4,7 @@ WoW addon that automates crest transmutation with a single macro.
 
 ## What It Does
 
-Dynamically updates a macro with your next action (buy and/or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor.
+Dynamically updates a macro with your next action (buy and/or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor (ex.: Delver's Pouches).
 
 ## Installation
 
@@ -63,16 +63,19 @@ The macro can do up to two things per click:
 - **Drag items to reorder** within each currency group to set priority
 - **Currency-aware grouping** - Items are grouped by their purchase currency; priority only matters within the same currency
 - If multiple currencies are available at a vendor, only one currency group will be purchased from per click
-- Example: Tracking both Weathered and Carved crests at a transmutation vendor will only buy from one currency group at a time (whichever has the highest priority affordable item)
+- Example: Tracking both Weathered and Carved crest packs at a transmutation vendor will only buy from one currency group at a time (whichever has the highest priority affordable item)
 
 ## Commands
 
 ```
-/cxh add <itemLink|itemID>  - Track an item
-/cxh list                   - Show tracked items
-/cxh show                   - Force show panel
-/cxh reset                  - Reset window position
-/cxh debug [on|off]         - Toggle debug mode
+/cxh add <itemLink|itemID>     - Track an item (works while panel closed)
+/cxh remove <itemLink|itemID>  - Stop tracking an item (non-seed items)
+/cxh list                      - Print tracked items (seed + user)
+/cxh show                      - Force show panel next to current vendor
+/cxh reset                     - Reset window position
+/cxh debug help                - Show debug categories
+/cxh debug <category>          - Toggle a specific debug category
+/cxh debug status              - Print current debug configuration
 ```
 
 ## License
