@@ -8,14 +8,6 @@ local ADDON_NAME, Addon = ...
 -- CrestXmuteDB.user.row[itemID] = rank (lower = higher priority for drag-to-reorder)
 -- CrestXmuteDB.framePos = { point, relName, relPoint, x, y }
 
--- Ensure DB structure exists (safety check for direct SavedVariables access)
-local function ensureDB()
-    CrestXmuteDB = CrestXmuteDB or {}
-    CrestXmuteDB.user = CrestXmuteDB.user or {}
-    CrestXmuteDB.user.tracked = CrestXmuteDB.user.tracked or {}
-    CrestXmuteDB.user.toggles = CrestXmuteDB.user.toggles or {}
-end
-
 -- True if the item is part of the season seed list (always tracked)
 function Addon:IsSeedItem(itemID)
     if not itemID or not self.DEFAULT_SEED then return false end
@@ -27,28 +19,33 @@ end
 
 -- Return the user-tracked set (SavedVariables)
 function Addon:GetTrackedSet()
-    ensureDB()
-    return CrestXmuteDB.user.tracked
+    if not CrestXmuteDB or not CrestXmuteDB.user then
+        return {}
+    end
+    return CrestXmuteDB.user.tracked or {}
 end
 
 -- union of seed + user
 function Addon:GetTrackedUnion()
-    ensureDB()
     local union = {}
+    -- Always include seed items, regardless of DB state
     if self.DEFAULT_SEED then
         for _, itemID in ipairs(self.DEFAULT_SEED) do
             union[itemID] = true
         end
     end
-    for itemID in pairs(CrestXmuteDB.user.tracked) do
-        union[itemID] = true
+    -- Add user-tracked items if DB is initialized
+    if CrestXmuteDB and CrestXmuteDB.user and CrestXmuteDB.user.tracked then
+        for itemID in pairs(CrestXmuteDB.user.tracked) do
+            union[itemID] = true
+        end
     end
     return union
 end
 
 -- Fire whenever tracked items change so UI + macro stay in sync.
 function Addon:TrackedChanged()
-    -- Refresh the list UI if it’s visible
+    -- Refresh the list UI if it's shown
     if self.Container and self.Container:IsShown() and self.RefreshList then
         self:RefreshList()
     end
@@ -74,7 +71,10 @@ end
 
 function Addon:GetItemToggles(itemID)
     -- Return per-item toggles; creates defaults if missing
-    ensureDB()
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.toggles then
+        -- Return defaults if DB not initialized yet
+        return { buy = true, open = true, confirm = true }
+    end
     local t = CrestXmuteDB.user.toggles[itemID]
     if not t then
         t = { buy = true, open = true, confirm = true }
@@ -86,23 +86,50 @@ end
 function Addon:AddTracked(itemID)
     -- Add an item ID to the user-tracked set; initializes toggles
     if not itemID then return false end
-    ensureDB()
+
+    -- DB must be initialized by ADDON_LOADED before we can add custom items
+    -- Do NOT call EnsureDB here - let ADDON_LOADED do it
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.tracked then
+        return false
+    end
+
+    -- Don't re-add if already tracked
     if CrestXmuteDB.user.tracked[itemID] then return false end
+
+    -- Add to tracked set and initialize toggles
     CrestXmuteDB.user.tracked[itemID] = true
     CrestXmuteDB.user.toggles[itemID] = CrestXmuteDB.user.toggles[itemID] or { buy = true, open = true, confirm = true }
-    if C_Item and C_Item.RequestLoadItemDataByID then C_Item.RequestLoadItemDataByID(itemID) end
-    if self.RebuildTrackedCache then self:RebuildTrackedCache() end
+
+    -- Request item data load
+    if C_Item and C_Item.RequestLoadItemDataByID then
+        C_Item.RequestLoadItemDataByID(itemID)
+    end
+
+    -- Rebuild cache if available
+    if self.RebuildTrackedCache then
+        self:RebuildTrackedCache()
+    end
+
+    -- Trigger refresh
     self:TrackedChanged()
     return true
 end
 
 function Addon:RemoveTracked(itemID)
     -- Remove an item ID from the user-tracked set and its toggles
-    ensureDB()
     if self:IsSeedItem(itemID) then return false end
+
+    if not CrestXmuteDB or not CrestXmuteDB.user then
+        return false
+    end
+
     CrestXmuteDB.user.tracked[itemID] = nil
     CrestXmuteDB.user.toggles[itemID] = nil
-    if self.RebuildTrackedCache then self:RebuildTrackedCache() end
+
+    if self.RebuildTrackedCache then
+        self:RebuildTrackedCache()
+    end
+
     self:TrackedChanged()
     return true
 end

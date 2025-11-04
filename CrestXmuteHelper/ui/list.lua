@@ -264,6 +264,7 @@ function Addon:RefreshList()
             scroll.ScrollBar:Hide()
             scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", 8, -52); scroll:SetPoint("BOTTOMRIGHT", -8, 14)
         end
+        self._isRefreshing = false
         return
     else
         if container.EmptyState then container.EmptyState:Hide() end

@@ -5,8 +5,8 @@ if not Addon then
     Addon = {}; _G[ADDON_NAME] = Addon
 end
 
--- SavedVariables
-CrestXmuteDB = CrestXmuteDB or {}
+-- SavedVariables (CrestXmuteDB will be initialized by WoW before ADDON_LOADED fires)
+-- Do NOT reference it here or it may interfere with WoW's loading mechanism
 
 -- Initialize debug system from saved state
 function Addon:EnsureDebug()
@@ -25,6 +25,8 @@ Addon.DEFAULT_SEED = {
 
 -- Defaults + schema (all user data under .user)
 function Addon:EnsureDB()
+    -- Initialize CrestXmuteDB if it doesn't exist (first run)
+    CrestXmuteDB = CrestXmuteDB or {}
     CrestXmuteDB.user = CrestXmuteDB.user or {}
     local u = CrestXmuteDB.user
     u.tracked = u.tracked or {}   -- user tracked set [itemID]=true
@@ -44,19 +46,31 @@ function Addon:IsSeeded(id)
     return false
 end
 
-function Addon:IsUser(id) return CrestXmuteDB.user.tracked[id] == true end
+function Addon:IsUser(id)
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.tracked then
+        return false
+    end
+    return CrestXmuteDB.user.tracked[id] == true
+end
 
 -- Tracked if seeded or user-added
 function Addon:IsTracked(id) return id and (self:IsSeeded(id) or self:IsUser(id)) or false end
 
 -- Enabled if not explicitly disabled
 function Addon:IsAllowed(id)
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.selected then
+        return true -- Default to enabled if DB not initialized
+    end
     local v = CrestXmuteDB.user.selected[id]
     return (v == nil) or (v == true)
 end
 
 -- Get per-item toggles with defaults
 function Addon:GetItemToggles(id)
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.toggles then
+        -- Return defaults if DB not initialized
+        return { buy = true, open = true, confirm = true }
+    end
     local t = CrestXmuteDB.user.toggles[id]
     if not t then
         t = { buy = true, open = true, confirm = true }
@@ -67,6 +81,9 @@ end
 
 -- Priority rank: lower value = higher priority. Default large to push to bottom.
 function Addon:GetRank(id)
+    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.row then
+        return 1e9 -- Default rank if DB not initialized
+    end
     local r = CrestXmuteDB.user.row[id]
     return (r ~= nil) and r or 1e9
 end
