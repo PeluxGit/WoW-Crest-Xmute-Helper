@@ -21,6 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Update TOC version from tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          sed -i "s/^## Version: .*/## Version: $VERSION/" CrestXmuteHelper/CrestXmuteHelper.toc
+          echo "Updated TOC to version $VERSION"
+
       - name: Create addon zip
         run: |
           set -euxo pipefail
