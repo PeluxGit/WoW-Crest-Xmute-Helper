@@ -1,0 +1,15 @@
+package-as: CrestXmuteHelper
+
+enable-nolib-creation: no
+
+ignore:
+    - README.md
+    - LICENSE
+    - .git
+    - .github
+    - .gitignore
+    - .pkgmeta
+
+manual-changelog:
+    filename: CHANGELOG.md
+    markup-type: markdown
