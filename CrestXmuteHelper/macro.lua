@@ -4,7 +4,6 @@ local ADDON_NAME, Addon = ...
 
 local MACRO_NAME = "CrestX-Open"
 local MACRO_ICON = "INV_Misc_Bag_10_Black"
-local MAX_BODY = 255
 local MAX_BAG_ITEMS = 30 -- Max distinct item IDs to collect from bags for /use lines
 
 Addon.MACRO_NAME = MACRO_NAME
@@ -15,31 +14,6 @@ local function BuildBuySnippet(itemID)
     return string.format(
         "/run for i=1,GetMerchantNumItems()do l=GetMerchantItemLink(i)if l and GetItemInfoInstant(l)==%d then BuyMerchantItem(i)break end end",
         itemID)
-end
-
--- Build a "safe" macro body with ONLY /use commands (no /run code)
--- This can be executed by secure buttons since it contains no Lua code
-function Addon:BuildSafeUseMacroBody()
-    local parts, length = {}, 0
-    local MAX_SAFE_BODY = 255
-
-    -- Fill with /use item:<id> for items present in bags and Open enabled
-    local openIDs = Addon:CollectTrackedIDsInBags(MAX_BAG_ITEMS)
-    for _, itemID in ipairs(openIDs) do
-        local tog = Addon:GetItemToggles(itemID)
-        if tog and tog.open then
-            local line = "/use item:" .. itemID
-            if (length + #line + 1) <= MAX_SAFE_BODY then
-                parts[#parts + 1] = line
-                length = length + #line + 1
-            else
-                break
-            end
-        end
-    end
-
-    if #parts == 0 then return nil end
-    return table.concat(parts, "\n")
 end
 
 -- Compose the macro body (<= 255 chars) from:
@@ -98,7 +72,7 @@ function Addon:SyncOpenMacro(force)
     local idx = GetMacroIndexByName(MACRO_NAME)
     if not idx or idx == 0 then
         local globalCount = GetNumMacros()
-        local globalLimit = (_G.MAX_GLOBAL_MACROS or 36)
+        local globalLimit = rawget(_G, "MAX_ACCOUNT_MACROS") or rawget(_G, "MAX_GLOBAL_MACROS") or 36
         if globalCount >= globalLimit then
             UIErrorsFrame:AddMessage("|cffff5555CrestXmute: No free general macro slots.|r")
             return

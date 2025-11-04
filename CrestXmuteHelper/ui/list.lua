@@ -102,7 +102,6 @@ function Addon:RefreshList()
     local y = 0
     local rows = {}
     local candidateSet = ComputeTopCandidatesByGroup()
-    local rowDebugCount = 0 -- Counter for debug logging
 
     -- Get the item that will actually be purchased (the top affordable with buy enabled)
     local nextPurchaseID = Addon:GetTopAffordableSingle()
@@ -124,7 +123,6 @@ function Addon:RefreshList()
     end
 
     local function makeRow(parent, yTop)
-        rowDebugCount = rowDebugCount + 1
         -- Rows anchor to both edges of content and follow its width (content width accounts for scrollbar reserve)
         local f = CreateFrame("Frame", nil, parent)
         f:SetHeight(UI.ROW_H)

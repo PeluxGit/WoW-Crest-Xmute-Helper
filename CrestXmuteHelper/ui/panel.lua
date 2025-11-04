@@ -137,9 +137,6 @@ function Addon:_HookMerchantButtonsForAddMode()
                     local name = GetItemInfo(itemID) or ("item:" .. itemID)
                     UIErrorsFrame:AddMessage("|cff33ff99CrestXmute: Added|r " .. name)
                     if self.TrackedChanged then self:TrackedChanged() end
-                    if self.Container and self.Container:IsShown() and self.RefreshList then
-                        self:RefreshList()
-                    end
                 else
                     UIErrorsFrame:AddMessage("|cffff6600CrestXmute: Could not add that item.|r")
                 end

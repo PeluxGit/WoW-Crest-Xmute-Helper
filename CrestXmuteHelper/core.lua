@@ -65,20 +65,6 @@ function Addon:IsAllowed(id)
     return (v == nil) or (v == true)
 end
 
--- Get per-item toggles with defaults
-function Addon:GetItemToggles(id)
-    if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.toggles then
-        -- Return defaults if DB not initialized
-        return { buy = true, open = true, confirm = true }
-    end
-    local t = CrestXmuteDB.user.toggles[id]
-    if not t then
-        t = { buy = true, open = true, confirm = true }
-        CrestXmuteDB.user.toggles[id] = t
-    end
-    return t
-end
-
 -- Priority rank: lower value = higher priority. Default large to push to bottom.
 function Addon:GetRank(id)
     if not CrestXmuteDB or not CrestXmuteDB.user or not CrestXmuteDB.user.row then
