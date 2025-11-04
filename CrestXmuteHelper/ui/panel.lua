@@ -357,5 +357,10 @@ function Addon:ShowUIForMerchant()
 end
 
 function Addon:HideUI()
-    if self.Container then self.Container:Hide() end
+    if self.Container then
+        self.Container:Hide()
+    end
+    if self.SyncOpenMacro then
+        self:SyncOpenMacro(true)
+    end
 end

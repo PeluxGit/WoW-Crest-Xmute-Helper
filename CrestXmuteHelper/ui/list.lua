@@ -86,13 +86,6 @@ end
 -- Clear all entries from a table (reuses the table reference instead of creating a new one)
 local function Wipe(t) for k in pairs(t) do t[k] = nil end end
 
-function Addon:TrackedChanged()
-    if self.Container and self.Container:IsShown() then
-        if self.RefreshList then self:RefreshList() end
-        if self.SyncOpenMacro then self:SyncOpenMacro(true) end
-    end
-end
-
 function Addon:RefreshList()
     if not self.Container or not self.Container:IsVisible() then return end
     if self._isRefreshing then return end

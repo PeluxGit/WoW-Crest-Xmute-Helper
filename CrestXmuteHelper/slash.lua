@@ -16,6 +16,14 @@ SlashCmdList.CRESTXMUTE = function(msg)
         else
             print("|cffff6600CrestXmute: Could not add that item.|r")
         end
+    elseif cmd == "remove" and rest and rest ~= "" then
+        local itemID = select(1, GetItemInfoInstant(rest)) or tonumber(rest)
+        if itemID and Addon.RemoveTracked and Addon:RemoveTracked(itemID) then
+            local name = GetItemInfo(itemID) or ("item:" .. itemID)
+            print("|cffff5555CrestXmute: Removed|r " .. name)
+        else
+            print("|cffff6600CrestXmute: Could not remove that item (not tracked or season seed).|r")
+        end
     elseif cmd == "list" then
         if Addon.DumpTracked then Addon:DumpTracked() end
     elseif cmd == "debug" then
@@ -63,6 +71,7 @@ SlashCmdList.CRESTXMUTE = function(msg)
     else
         print("|cffffd200CrestXmute|r commands:")
         print("  /cxh add <itemLink|itemID>")
+        print("  /cxh remove <itemLink|itemID>")
         print("  /cxh list")
         print("  /cxh debug [status|<category>]")
         print("  /cxh show")
