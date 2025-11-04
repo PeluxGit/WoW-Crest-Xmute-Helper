@@ -319,26 +319,27 @@ function Addon:RefreshList()
             local willUse = (nextUseID and e.itemID == nextUseID)
 
             if willBuy and willUse then
-                -- Both buy and use: Blend of blue + gold (additive)
-                -- Blue (0.2, 0.4, 0.8) + Gold (0.8, 0.6, 0.2) = (1.0, 1.0, 1.0) normalized to (0.5, 0.5, 0.5)
-                -- Using a teal/cyan blend: combines cool blue with warm gold
-                row.highlight:SetColorTexture(0.5, 0.7, 0.6, 0.35)
+                -- Both buy and use: combined highlight
+                local c = UI.HIGHLIGHT_BOTH
+                row.highlight:SetColorTexture(c[1], c[2], c[3], c[4])
                 row.highlight:Show()
                 -- Force visual update on next frame
                 C_Timer.After(0, function()
                     if row.highlight then row.highlight:Show() end
                 end)
             elseif willBuy then
-                -- Will be purchased: Blue
-                row.highlight:SetColorTexture(0.2, 0.4, 0.8, 0.30)
+                -- Will be purchased next
+                local c = UI.HIGHLIGHT_BUY
+                row.highlight:SetColorTexture(c[1], c[2], c[3], c[4])
                 row.highlight:Show()
                 -- Force visual update on next frame
                 C_Timer.After(0, function()
                     if row.highlight then row.highlight:Show() end
                 end)
             elseif willUse then
-                -- Will be used/opened: Gold/Orange
-                row.highlight:SetColorTexture(0.8, 0.6, 0.2, 0.30)
+                -- Will be used/opened next
+                local c = UI.HIGHLIGHT_USE
+                row.highlight:SetColorTexture(c[1], c[2], c[3], c[4])
                 row.highlight:Show()
                 -- Force visual update on next frame
                 C_Timer.After(0, function()
@@ -381,7 +382,8 @@ function Addon:RefreshList()
             local isUnavailable = (not e.affordable) or (not tog.buy)
             local grey          = (not isCandidate) or isUnavailable
             if grey then
-                row.icon:SetDesaturated(true); row.name:SetTextColor(0.6, 0.6, 0.6)
+                local c = UI.TEXT_DISABLED
+                row.icon:SetDesaturated(true); row.name:SetTextColor(c[1], c[2], c[3])
             else
                 row.icon:SetDesaturated(false); row.name:SetTextColor(1, 0.82, 0)
             end

@@ -20,6 +20,25 @@ local function ThrottledRefresh()
     Addon:RefreshList()
 end
 
+-- Debounce timer for BAG_UPDATE_DELAYED to prevent race conditions
+local bagUpdateTimer = nil
+local function DebouncedBagUpdate()
+    if bagUpdateTimer then
+        bagUpdateTimer:Cancel()
+    end
+    bagUpdateTimer = C_Timer.NewTimer(0.1, function()
+        if Addon.Container and Addon.Container:IsShown() then
+            -- Sync macro to reflect current bag state
+            if Addon.SyncOpenMacro then
+                Addon:SyncOpenMacro(true)
+            end
+            -- Refresh the UI to update affordability/counts
+            ThrottledRefresh()
+        end
+        bagUpdateTimer = nil
+    end)
+end
+
 local function IsTrackedItemID(itemID)
     if not itemID then return false end
     local u = Addon.GetTrackedUnion and Addon:GetTrackedUnion() or {}
@@ -113,14 +132,8 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "BAG_UPDATE_DELAYED" then
         -- Bag contents changed (items added/removed/used)
         -- Only sync macro and refresh UI if window is open
-        if Addon.Container and Addon.Container:IsShown() then
-            -- Sync macro to reflect current bag state
-            if Addon.SyncOpenMacro then
-                Addon:SyncOpenMacro(true)
-            end
-            -- Refresh the UI to update affordability/counts
-            ThrottledRefresh()
-        end
+        -- Use debounce to prevent race conditions from rapid bag updates
+        DebouncedBagUpdate()
         return
     end
 end)

@@ -134,21 +134,28 @@ function Addon:CollectTrackedMerchantEntries_All()
     local n = GetMerchantNumItems() or 0
     for idx = 1, n do
         local name, _, _, numAvailable, isPurchasable, isUsable = GetMerchantItemInfo(idx)
-        local link = GetMerchantItemLink(idx)
-        local itemID
-        if link then itemID = select(1, GetItemInfoInstant(link)) end
-        if itemID and tracked[itemID] then
-            local affordable = (self.PlayerCanAfford and self.PlayerCanAfford(idx)) or self:IsAffordable(idx)
-            table.insert(out, {
-                idx = idx,
-                itemID = itemID,
-                name = name or ("item:" .. itemID),
-                icon = Addon:GetItemIcon(itemID),
-                numAvailable = numAvailable,
-                isPurchasable = isPurchasable,
-                isUsable = isUsable,
-                affordable = affordable,
-            })
+        if not name then
+            -- Invalid merchant item data at this index
+            if Addon.Debug and Addon.Debug.DebugPrintCategory then
+                Addon.Debug.DebugPrintCategory("merchant", "GetMerchantItemInfo(%d) returned nil name", idx)
+            end
+        else
+            local link = GetMerchantItemLink(idx)
+            local itemID
+            if link then itemID = select(1, GetItemInfoInstant(link)) end
+            if itemID and tracked[itemID] then
+                local affordable = (self.PlayerCanAfford and self.PlayerCanAfford(idx)) or self:IsAffordable(idx)
+                table.insert(out, {
+                    idx = idx,
+                    itemID = itemID,
+                    name = name or ("item:" .. itemID),
+                    icon = Addon:GetItemIcon(itemID),
+                    numAvailable = numAvailable,
+                    isPurchasable = isPurchasable,
+                    isUsable = isUsable,
+                    affordable = affordable,
+                })
+            end
         end
     end
     return out

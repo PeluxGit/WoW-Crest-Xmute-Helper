@@ -11,6 +11,11 @@ local unpack = _G.unpack
 local ELVUI_ADDMODE_SCALE_MULT = 0.83  -- Add Mode checkbox: 0.75 / 0.9 base
 local ELVUI_CHECKBOX_SCALE_MULT = 0.86 -- Row checkboxes: 0.6 / 0.7 base
 
+-- ElvUI styling constants
+local ELVUI_ICON_CROP = { 0.08, 0.92, 0.08, 0.92 } -- Icon crop coords for square appearance
+local ELVUI_HOVER_COLOR = { 0.2, 0.2, 0.2 }        -- Lighter color for checkbox hover
+local ELVUI_BACKDROP_FALLBACK = { 0.1, 0.1, 0.1 }  -- Fallback if E.media.backdropcolor unavailable
+
 local function ApplyElvUISkin()
     -- Check if ElvUI is available
     if not ElvUI then return end
@@ -35,8 +40,8 @@ local function ApplyElvUISkin()
         if not checkbox or not checkbox.backdrop then return end
 
         -- Store original colors
-        local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
-        local hoverColor = { 0.2, 0.2, 0.2 } -- Lighter on hover
+        local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
+        local hoverColor = ELVUI_HOVER_COLOR -- Lighter on hover
 
         checkbox:HookScript("OnEnter", function(self)
             if self.backdrop and not self:GetChecked() then
@@ -120,7 +125,7 @@ local function ApplyElvUISkin()
             local iconTexture = container.MacroBtn:GetNormalTexture()
             if iconTexture then
                 iconTexture:SetTexture("Interface\\Icons\\INV_Misc_Bag_10_Black")
-                iconTexture:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- Crop edges for cleaner look
+                iconTexture:SetTexCoord(ELVUI_ICON_CROP[1], ELVUI_ICON_CROP[2], ELVUI_ICON_CROP[3], ELVUI_ICON_CROP[4]) -- Crop edges for cleaner look
                 iconTexture:ClearAllPoints()
                 iconTexture:SetPoint("TOPLEFT", 2, -2)
                 iconTexture:SetPoint("BOTTOMRIGHT", -2, 2)
@@ -140,7 +145,7 @@ local function ApplyElvUISkin()
             container.AddModeBtn:SetScale(baseScale * ELVUI_ADDMODE_SCALE_MULT)
             -- Only set background color for unchecked state
             if container.AddModeBtn.backdrop then
-                local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
                 container.AddModeBtn.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                     backdropColor[4] or 1)
             end
@@ -163,7 +168,7 @@ local function ApplyElvUISkin()
         for _, cell in ipairs(container.Content.cells) do
             -- Apply perfect square cropping to item icons (ElvUI style)
             if cell.icon and not cell.icon._elvuiCropped then
-                cell.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+                cell.icon:SetTexCoord(ELVUI_ICON_CROP[1], ELVUI_ICON_CROP[2], ELVUI_ICON_CROP[3], ELVUI_ICON_CROP[4])
                 cell.icon._elvuiCropped = true
             end
 
@@ -179,7 +184,7 @@ local function ApplyElvUISkin()
                         cell.buy:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         -- Only set background color for unchecked state
                         if cell.buy.backdrop then
-                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
                             cell.buy.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                                 backdropColor[4] or 1)
                         end
@@ -200,7 +205,7 @@ local function ApplyElvUISkin()
                         cell.open:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         -- Only set background color for unchecked state
                         if cell.open.backdrop then
-                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
                             cell.open.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                                 backdropColor[4] or 1)
                         end
@@ -221,7 +226,7 @@ local function ApplyElvUISkin()
                         cell.conf:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         -- Only set background color for unchecked state
                         if cell.conf.backdrop then
-                            local backdropColor = E.media.backdropcolor or { 0.1, 0.1, 0.1 }
+                            local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
                             cell.conf.backdrop:SetBackdropColor(backdropColor[1], backdropColor[2], backdropColor[3],
                                 backdropColor[4] or 1)
                         end

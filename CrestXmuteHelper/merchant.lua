@@ -10,6 +10,11 @@ local ADDON_NAME, Addon = ...
 -- - All cost lines: currencies, currency-links, or item costs vs player amounts
 local function PlayerCanAfford(idx)
     local _, _, _, _, numAvailable, isPurchasable, isUsable = GetMerchantItemInfo(idx)
+    -- Validate that we got valid data from GetMerchantItemInfo
+    if isPurchasable == nil and isUsable == nil then
+        -- No valid merchant data
+        return false
+    end
     -- Check if item is purchasable (not locked/already bought one-time items)
     if isPurchasable == false then return false end
     if isUsable == false then return false end
@@ -48,6 +53,7 @@ Addon.PlayerCanAfford = PlayerCanAfford
 function Addon:GetTopAffordableSingle()
     local bestId, bestIdx, bestRank
     local n = GetMerchantNumItems()
+    if not n or n == 0 then return nil, nil end
     for i = 1, n do
         local link = GetMerchantItemLink(i)
         if link then
