@@ -6,7 +6,7 @@
 ## SavedVariables: CrestXmuteDB
 ## X-Curse-Project-ID: 1378586
 ## X-Curse-Project-Slug: crest-xmute-helper
-## X-Wago-ID: 6gLxRK1
+## X-Wago-ID: E6gLxRK1
 
 debug.lua
 core.lua
