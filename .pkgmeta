@@ -2,6 +2,9 @@ package-as: CrestXmuteHelper
 
 enable-nolib-creation: no
 
+move-folders:
+    CrestXmuteHelper: .
+
 ignore:
     - README.md
     - LICENSE
