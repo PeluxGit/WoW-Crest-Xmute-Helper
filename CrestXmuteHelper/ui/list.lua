@@ -275,9 +275,13 @@ function Addon:RefreshList()
                     (info and ("  (" .. info.quantity .. ")") or "")
             elseif key:find("^item:") then
                 local itemID = tonumber(key:match("item:(%d+)"))
-                local name = GetItemInfo(itemID) or ("item:" .. (itemID or 0))
-                local have = GetItemCount(itemID, true) or 0
-                text = name .. "  (" .. have .. ")"
+                if itemID then
+                    local name = GetItemInfo(itemID) or ("item:" .. itemID)
+                    local have = GetItemCount(itemID, true) or 0
+                    text = name .. "  (" .. have .. ")"
+                else
+                    text = key .. "  (invalid)"
+                end
             else
                 text = "Misc"
             end

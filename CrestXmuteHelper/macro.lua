@@ -81,7 +81,7 @@ function Addon:SyncOpenMacro(force)
     else
         local name, icon, isChar, oldBody = GetMacroInfo(idx)
         if oldBody ~= body or force then
-            EditMacro(idx, MACRO_NAME, icon, body, 1, isChar)
+            EditMacro(idx, MACRO_NAME, icon, body)
         end
     end
 end

@@ -4,6 +4,7 @@ local ADDON_NAME, Addon = ...
 -- WoW API globals referenced in this module (accessed via _G for static analysis friendliness)
 local _G = _G
 local hooksecurefunc = _G.hooksecurefunc
+---@diagnostic disable-next-line: undefined-field
 local ElvUI = _G.ElvUI
 local unpack = _G.unpack
 

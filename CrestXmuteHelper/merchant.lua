@@ -31,9 +31,11 @@ local function PlayerCanAfford(idx)
             local curID = itemLink:match("Hcurrency:(%d+)")
             if curID then
                 curID = tonumber(curID)
-                local info = C_CurrencyInfo.GetCurrencyInfo(curID)
-                local have = info and info.quantity or 0
-                if have < (costQty or 0) then return false end
+                if curID then
+                    local info = C_CurrencyInfo.GetCurrencyInfo(curID)
+                    local have = info and info.quantity or 0
+                    if have < (costQty or 0) then return false end
+                end
             else
                 local itemID = select(1, GetItemInfoInstant(itemLink))
                 if itemID then
