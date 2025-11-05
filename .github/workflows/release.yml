@@ -25,14 +25,20 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          sed -i "s/^## Version: .*/## Version: $VERSION/" CrestXmuteHelper/CrestXmuteHelper.toc
+          sed -i "s/^## Version: .*/## Version: $VERSION/" CrestXmuteHelper.toc
           echo "Updated TOC to version $VERSION"
 
       - name: Create addon zip
         run: |
           set -euxo pipefail
           ZIP_NAME="CrestXmuteHelper-${{ github.ref_name }}.zip"
-          zip -r "$ZIP_NAME" CrestXmuteHelper
+          # Create a temp directory with addon structure
+          mkdir -p package/CrestXmuteHelper
+          # Copy all addon files (excluding repo metadata)
+          rsync -av --exclude='.git' --exclude='.github' --exclude='.gitignore' --exclude='.pkgmeta' --exclude='.vscode' --exclude='.luarc.json' --exclude='LICENSE' --exclude='README.md' --exclude='CHANGELOG.md' ./ package/CrestXmuteHelper/
+          cd package
+          zip -r "../$ZIP_NAME" CrestXmuteHelper
+          cd ..
           ls -lah "$ZIP_NAME"
 
       - name: Upload asset to GitHub release
