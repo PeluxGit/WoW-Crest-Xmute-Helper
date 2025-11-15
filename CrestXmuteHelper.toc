@@ -18,5 +18,6 @@ macro.lua
 ui/layout.lua
 ui/panel.lua
 ui/list.lua
+ui/action_button.lua
 ui/elvui_skin.lua
 slash.lua

@@ -36,6 +36,7 @@ function Addon:EnsureDB()
 
     -- Settings
     CrestXmuteDB.framePos = CrestXmuteDB.framePos or nil -- window position
+    CrestXmuteDB.actionButton = CrestXmuteDB.actionButton or {} -- single action button assignment
 end
 
 function Addon:IsSeeded(id)
@@ -116,4 +117,9 @@ end
 -- Public init
 function Addon:Init()
     self:EnsureDB()
+
+    -- Set up local db reference for quick access
+    self.db = {
+        actionButton = CrestXmuteDB.actionButton
+    }
 end

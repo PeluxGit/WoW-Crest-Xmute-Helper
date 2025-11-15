@@ -213,33 +213,16 @@ function Addon:EnsureUI()
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
 
-    -- Create a button that picks up the macro when clicked
-    local macroBtn = CreateFrame("Button", nil, container)
-    macroBtn:SetSize(22, 22)
-    macroBtn:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
-    macroBtn:SetNormalTexture("Interface\\Icons\\INV_Misc_Bag_10_Black")
-    macroBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-    macroBtn:SetScript("OnClick", function()
-        local macroIndex = GetMacroIndexByName("CrestX-Open")
-        if macroIndex and macroIndex > 0 then
-            PickupMacro(macroIndex)
-        else
-            UIErrorsFrame:AddMessage(
-                "|cffff6600CrestXmute: Macro 'CrestX-Open' not found. Visit a merchant to create it.|r")
-        end
-    end)
-    macroBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("CrestX-Open Macro", 1, 1, 1)
-        GameTooltip:AddLine("Click to pick up the macro, then drag it to your action bar.", nil, nil, nil, true)
-        GameTooltip:Show()
-    end)
-    macroBtn:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    container.MacroBtn = macroBtn
+    -- Create macro action button (single-slot action bar)
+    local actionButton = self:CreateMacroActionButton(container)
+    if actionButton then
+        actionButton:ClearAllPoints()
+        actionButton:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
+    end
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     addMode:SetScale(UI.ADDMODE_SCALE or 0.9)
-    addMode:SetPoint("RIGHT", macroBtn, "LEFT", -8, 0)
+    addMode:SetPoint("RIGHT", actionButton or container, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lbl:SetPoint("RIGHT", addMode, "LEFT", -4, 0)
@@ -336,6 +319,7 @@ function Addon:ShowUIForMerchant()
         DockOutsideMerchant(self.Container)
     end
     self.Container:Show()
+
     -- Columns already computed in EnsureUI; no need to recalc for fixed-width panel
     if self.RefreshList then
         -- Wait a frame to ensure merchant data is loaded

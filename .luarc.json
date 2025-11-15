@@ -43,6 +43,11 @@
     "GetItemCount",
     "GetItemIcon",
 
+    // WoW Action/ActionButton API
+    "GetActionInfo",
+    "ActionButton_Update",
+    "ActionButton_UpdateHotkeys",
+
     // WoW Container API
     "C_Container",
     "NUM_BAG_SLOTS",
