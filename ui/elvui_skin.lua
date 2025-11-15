@@ -58,6 +58,114 @@ local function ApplyElvUISkin()
         end)
     end
 
+    local function SkinMacroActionButton()
+        local button = Addon.MacroActionButton
+        if not button or button._elvuiSkinned then return end
+
+        if S and S.HandleButton then
+            local success, err = pcall(S.HandleButton, S, button)
+            if not success then
+                print("|cffff0000[CrestXmute]|r ElvUI HandleButton (macro) failed:", err)
+            end
+        elseif button.SetTemplate then
+            button:SetTemplate("Transparent", true)
+        end
+
+        local icon = button.icon or _G[button:GetName() .. "Icon"]
+        if icon then
+            icon:SetTexCoord(ELVUI_ICON_CROP[1], ELVUI_ICON_CROP[2], ELVUI_ICON_CROP[3], ELVUI_ICON_CROP[4])
+            if icon.SetInside then
+                icon:SetInside()
+            else
+                icon:ClearAllPoints()
+                icon:SetPoint("TOPLEFT", 2, -2)
+                icon:SetPoint("BOTTOMRIGHT", -2, 2)
+            end
+        end
+
+        local highlightTex = button:GetHighlightTexture()
+        if highlightTex then
+            highlightTex:SetTexture(nil)
+        end
+
+        local pushedTex = button:GetPushedTexture()
+        if pushedTex then
+            pushedTex:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+            pushedTex:SetAllPoints(button)
+        end
+
+        local checkedTex = button:GetCheckedTexture()
+        if checkedTex then
+            checkedTex:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+            checkedTex:SetBlendMode("ADD")
+            checkedTex:SetAlpha(0.3)
+            checkedTex:SetAllPoints(button)
+        end
+
+        if button.Border then button.Border:Hide() end
+        if button.NewActionTexture then button.NewActionTexture:SetAlpha(0) end
+        if button.cooldown and E and E.RegisterCooldown then
+            E:RegisterCooldown(button.cooldown)
+        end
+
+        button._elvuiSkinned = true
+    end
+
+    local function SkinMacroActionButton()
+        local button = Addon.MacroActionButton
+        if not button or button._elvuiSkinned then
+            return
+        end
+
+        if S and S.HandleButton then
+            local success, err = pcall(S.HandleButton, S, button)
+            if not success then
+                print("|cffff0000[CrestXmute]|r ElvUI HandleButton (macro) failed:", err)
+            end
+        elseif button.SetTemplate then
+            button:SetTemplate("Transparent", true)
+        end
+
+        local icon = button.icon or _G[button:GetName() .. "Icon"]
+        if icon then
+            icon:SetTexCoord(ELVUI_ICON_CROP[1], ELVUI_ICON_CROP[2], ELVUI_ICON_CROP[3], ELVUI_ICON_CROP[4])
+            if icon.SetInside then
+                icon:SetInside()
+            else
+                icon:ClearAllPoints()
+                icon:SetPoint("TOPLEFT", 2, -2)
+                icon:SetPoint("BOTTOMRIGHT", -2, 2)
+            end
+        end
+
+        local highlightTex = button:GetHighlightTexture()
+        if highlightTex then
+            highlightTex:SetTexture(nil)
+        end
+
+        local pushedTex = button:GetPushedTexture()
+        if pushedTex then
+            pushedTex:SetTexture("Interface\\Buttons\\UI-Quickslot-Depress")
+            pushedTex:SetAllPoints(button)
+        end
+
+        local checkedTex = button:GetCheckedTexture()
+        if checkedTex then
+            checkedTex:SetTexture("Interface\\Buttons\\CheckButtonHilight")
+            checkedTex:SetBlendMode("ADD")
+            checkedTex:SetAlpha(0.3)
+            checkedTex:SetAllPoints(button)
+        end
+
+        if button.Border then button.Border:Hide() end
+        if button.NewActionTexture then button.NewActionTexture:SetAlpha(0) end
+        if button.cooldown and E and E.RegisterCooldown then
+            E:RegisterCooldown(button.cooldown)
+        end
+
+        button._elvuiSkinned = true
+    end
+
     local function SkinContainer()
         local container = Addon.Container
         if not container then return end
@@ -157,6 +265,8 @@ local function ApplyElvUISkin()
         -- Store the effective checkbox scale for positioning calculations
         local baseCheckboxScale = UI.CHECKBOX_SCALE or 0.7
         container._effectiveCheckboxScale = baseCheckboxScale * ELVUI_CHECKBOX_SCALE_MULT
+
+        SkinMacroActionButton()
 
         container._elvuiSkinned = true
     end
@@ -261,6 +371,12 @@ local function ApplyElvUISkin()
     if type(Addon.RefreshList) == "function" then
         hooksecurefunc(Addon, "RefreshList", function()
             SkinRows()
+        end)
+    end
+
+    if type(Addon.CreateMacroActionButton) == "function" then
+        hooksecurefunc(Addon, "CreateMacroActionButton", function()
+            SkinMacroActionButton()
         end)
     end
 

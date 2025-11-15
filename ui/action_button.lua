@@ -3,6 +3,7 @@
 local ADDON_NAME, Addon = ...
 
 local MACRO_NAME = "CrestX-Open"
+local UI = Addon.UI or {}
 
 local function HideDefaultHighlights(button)
     if button.NewActionTexture then
