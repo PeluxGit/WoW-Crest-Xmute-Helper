@@ -30,6 +30,7 @@ UI.SCROLLBAR_RESERVE    = 30                -- Dummy padding after Remove so scr
 UI.CHECKBOX_SCALE       = 0.7
 UI.ADDMODE_SCALE        = 0.9
 UI.REMOVE_SCALE         = 0.7
+UI.ACTIONBUTTON_SCALE   = 0.65
 
 -- Fallback absolute X positions in row space (CENTER-to-LEFT anchor)
 -- These reproduce the empirically tuned look if measurement/scaling is unavailable
