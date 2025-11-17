@@ -23,6 +23,9 @@ Addon.DEFAULT_SEED = {
     240929,
 }
 
+-- Shared constants
+Addon.MAX_TRACKED_BAG_IDS = 30 -- Max distinct tracked IDs sampled from bags for macro/use logic
+
 -- Defaults + schema (all user data under .user)
 function Addon:EnsureDB()
     -- Initialize CrestXmuteDB if it doesn't exist (first run)

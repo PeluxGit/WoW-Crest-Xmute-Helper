@@ -134,19 +134,19 @@ local function ApplyElvUISkin()
         end
         -- Ensure we use ElvUI's configured fade/backdrop colors (less opaque than Default)
         if E and E.media then
-            local fade = E.media.backdropfadecolor or { 0.06, 0.06, 0.06, 0.8 }
+            local fade = E.media.backdropfadecolor or ELVUI_BACKDROP_FALLBACK
             local brdr = E.media.bordercolor or { 0, 0, 0 }
-            if container.SetBackdropColor then
-                container:SetBackdropColor(fade[1], fade[2], fade[3], fade[4] or 0.8)
+            if fade and container.SetBackdropColor then
+                container:SetBackdropColor(fade[1], fade[2], fade[3], fade[4])
             end
-            if container.SetBackdropBorderColor then
+            if brdr and container.SetBackdropBorderColor then
                 container:SetBackdropBorderColor(brdr[1], brdr[2], brdr[3], 1)
             end
             if container.backdrop then
-                if container.backdrop.SetBackdropColor then
-                    container.backdrop:SetBackdropColor(fade[1], fade[2], fade[3], fade[4] or 0.8)
+                if fade and container.backdrop.SetBackdropColor then
+                    container.backdrop:SetBackdropColor(fade[1], fade[2], fade[3], fade[4])
                 end
-                if container.backdrop.SetBackdropBorderColor then
+                if brdr and container.backdrop.SetBackdropBorderColor then
                     container.backdrop:SetBackdropBorderColor(brdr[1], brdr[2], brdr[3], 1)
                 end
             end
@@ -197,7 +197,7 @@ local function ApplyElvUISkin()
                 end
             end
             -- Scale down for ElvUI relative to base ADDMODE_SCALE
-            local baseScale = UI.ADDMODE_SCALE or 0.9
+            local baseScale = UI.ADDMODE_SCALE
             if UI.SetScaledSize then
                 UI.SetScaledSize(container.AddModeBtn, baseScale * ELVUI_ADDMODE_SCALE_MULT)
             end
@@ -212,7 +212,7 @@ local function ApplyElvUISkin()
         end
 
         -- Store the effective checkbox scale for positioning calculations
-        local baseCheckboxScale = UI.CHECKBOX_SCALE or 0.7
+        local baseCheckboxScale = UI.CHECKBOX_SCALE
         container._effectiveCheckboxScale = baseCheckboxScale * ELVUI_CHECKBOX_SCALE_MULT
 
         SkinMacroActionButton()
@@ -240,7 +240,7 @@ local function ApplyElvUISkin()
                         print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (buy) failed:", err)
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        local baseScale = UI.CHECKBOX_SCALE
                         if UI.SetScaledSize then
                             UI.SetScaledSize(cell.buy, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         end
@@ -263,7 +263,7 @@ local function ApplyElvUISkin()
                         print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (open) failed:", err)
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        local baseScale = UI.CHECKBOX_SCALE
                         if UI.SetScaledSize then
                             UI.SetScaledSize(cell.open, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         end
@@ -286,7 +286,7 @@ local function ApplyElvUISkin()
                         print("|cffff0000[CrestXmute]|r ElvUI HandleCheckBox (conf) failed:", err)
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
-                        local baseScale = UI.CHECKBOX_SCALE or 0.7
+                        local baseScale = UI.CHECKBOX_SCALE
                         if UI.SetScaledSize then
                             UI.SetScaledSize(cell.conf, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
                         end

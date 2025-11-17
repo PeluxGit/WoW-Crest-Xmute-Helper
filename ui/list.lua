@@ -97,6 +97,11 @@ function Addon:RefreshList()
     content.cells                    = content.cells or {}
     for _, f in ipairs(content.cells) do if f.Hide then f:Hide() end end
     Wipe(content.cells)
+    content.rows                     = content.rows or {}
+    for _, row in ipairs(content.rows) do
+        row:Hide()
+        row._inUse = false
+    end
 
     local flat = BuildGroupedEntries()
     local y = 0
@@ -122,142 +127,121 @@ function Addon:RefreshList()
             tostring(nextPurchaseID or "nil"), tostring(nextUseID or "nil"))
     end
 
-    local function makeRow(parent, yTop)
-        -- Rows anchor to both edges of content and follow its width (content width accounts for scrollbar reserve)
-        local f = CreateFrame("Frame", nil, parent)
-        f:SetHeight(UI.ROW_H)
-        f:SetPoint("TOPLEFT", 0, -yTop)
-        f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -yTop)
-        f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
+    local function acquireRow(parent, index)
+        content.rows[index] = content.rows[index] or CreateFrame("Frame", nil, parent)
+        local f = content.rows[index]
+        if not f._initialized then
+            f:SetHeight(UI.ROW_H)
+            f:SetPoint("TOPLEFT", 0, 0)
+            f:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, 0)
+            f:SetMovable(true); f:SetClampedToScreen(true); f:EnableMouse(true)
 
-        -- Set explicit frame level to ensure proper rendering order
-        local parentLevel = parent:GetFrameLevel() or 1
-        f:SetFrameLevel(parentLevel + 1)
+            local parentLevel = parent:GetFrameLevel() or 1
+            f:SetFrameLevel(parentLevel + 1)
 
-        -- Background highlight texture (for next-purchase/use indicator)
-        -- Place on BACKGROUND so it sits beneath icon and name
-        f.highlight = f:CreateTexture(nil, "BACKGROUND")
-        -- Inset by 1px to avoid covering scroll frame borders (especially with ElvUI skin)
-        f.highlight:SetPoint("TOPLEFT", 1, -1)
-        f.highlight:SetPoint("BOTTOMRIGHT", -1, 1)
-        f.highlight:SetDrawLayer("BACKGROUND", 0)
-        f.highlight:SetVertexColor(1, 1, 1, 1)
-        f.highlight:Hide()
+            f.highlight = f:CreateTexture(nil, "BACKGROUND")
+            f.highlight:SetPoint("TOPLEFT", 1, -1)
+            f.highlight:SetPoint("BOTTOMRIGHT", -1, 1)
+            f.highlight:SetDrawLayer("BACKGROUND", 0)
+            f.highlight:SetVertexColor(1, 1, 1, 1)
+            f.highlight:Hide()
 
-        -- Icon (at the far left)
-        f.icon = f:CreateTexture(nil, "ARTWORK")
-        f.icon:SetSize(UI.ICON_W, UI.ICON_W)
-        f.icon:SetPoint("LEFT", UI.LEFT_PAD, 0)
+            f.icon = f:CreateTexture(nil, "ARTWORK")
+            f.icon:SetSize(UI.ICON_W, UI.ICON_W)
+            f.icon:SetPoint("LEFT", UI.LEFT_PAD, 0)
 
-        -- Name (to the right of icon, fixed width)
-        f.name = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        f.name:SetPoint("LEFT", f.icon, "RIGHT", UI.ICON_PAD, 0)
-        f.name:SetWidth(UI.NAME_COL_W)
-        f.name:SetJustifyH("LEFT")
-        f.name:SetWordWrap(true)
+            f.name = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            f.name:SetPoint("LEFT", f.icon, "RIGHT", UI.ICON_PAD, 0)
+            f.name:SetWidth(UI.NAME_COL_W)
+            f.name:SetJustifyH("LEFT")
+            f.name:SetWordWrap(true)
 
-        -- Create checkboxes - anchor each to the previous element, just like icon→name
-        local CHECKBOX_SCALE = UI.CHECKBOX_SCALE or 0.7
-        -- If ElvUI has set an effective scale (via _effectiveCheckboxScale), use that instead
-        if container._effectiveCheckboxScale then
-            CHECKBOX_SCALE = container._effectiveCheckboxScale
+            f.buy = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+            f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+            f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
+
+            f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
+            f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
+
+            f.dragZone = CreateFrame("Frame", nil, f)
+            f.dragZone:SetPoint("LEFT", UI.LEFT_PAD, 0)
+            f.dragZone:SetSize(UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W, UI.ROW_H)
+            f.dragZone:EnableMouse(true)
+
+            f.dragZone:SetScript("OnMouseDown", function(self, button)
+                if button ~= "LeftButton" or not f.itemID then return end
+                f.isDragging = true
+                f:SetAlpha(0.9)
+                f:StartMoving()
+            end)
+
+            f.dragZone:SetScript("OnMouseUp", function(self, button)
+                if button ~= "LeftButton" or not f.isDragging then return end
+                f.isDragging = false
+                f:StopMovingOrSizing()
+                f:SetAlpha(1)
+
+                local myMid = (f:GetTop() + f:GetBottom()) / 2
+                local siblings = {}
+                for _, rf in ipairs(rows) do
+                    if rf ~= f and rf:IsShown() and rf.itemID then
+                        table.insert(siblings, rf)
+                    end
+                end
+                table.sort(siblings, function(a, b) return (a:GetTop() or 0) > (b:GetTop() or 0) end)
+
+                local target = #siblings + 1
+                for i, rf in ipairs(siblings) do
+                    local mid = (rf:GetTop() + rf:GetBottom()) / 2
+                    if myMid > mid then
+                        target = i; break
+                    end
+                end
+
+                local newOrder = {}
+                for i, rf in ipairs(siblings) do
+                    if i == target then table.insert(newOrder, f.itemID) end
+                    table.insert(newOrder, rf.itemID)
+                end
+                if target == #siblings + 1 then table.insert(newOrder, f.itemID) end
+
+                if Addon.SetRankOrder then Addon:SetRankOrder(newOrder) end
+                Addon:RefreshList()
+                if Addon.SyncOpenMacro then Addon:SyncOpenMacro(true) end
+            end)
+
+            f._initialized = true
         end
 
-        f.buy = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-        f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-        f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
-
+        local CHECKBOX_SCALE = container._effectiveCheckboxScale or UI.CHECKBOX_SCALE
         if UI.SetScaledSize then
             UI.SetScaledSize(f.buy, CHECKBOX_SCALE)
             UI.SetScaledSize(f.open, CHECKBOX_SCALE)
             UI.SetScaledSize(f.conf, CHECKBOX_SCALE)
+            UI.SetScaledSize(f.remove, UI.REMOVE_SCALE)
         end
 
-        -- Set frame level to ensure they're visible above the background
         local baseLevel = f:GetFrameLevel()
         f.buy:SetFrameLevel(baseLevel + 2)
         f.open:SetFrameLevel(baseLevel + 2)
         f.conf:SetFrameLevel(baseLevel + 2)
 
-        -- Explicitly show checkboxes (CreateFrame creates them hidden by default)
-        f.buy:Show()
-        f.open:Show()
-        f.conf:Show()
-
-        -- Prepare remove button early so its scale can be accounted for in X positioning
-        if not f.remove then
-            f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
-            if UI.SetScaledSize then
-                UI.SetScaledSize(f.remove, UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
-            end
-            f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
-        end
-
-        -- Defer checkbox/remove positioning until after layout stabilizes
         f._needsPosition = true
-
-        -- Transparent drag zone (only covers icon + name area)
-        f.dragZone = CreateFrame("Frame", nil, f)
-        f.dragZone:SetPoint("LEFT", UI.LEFT_PAD, 0)
-        f.dragZone:SetSize(UI.ICON_W + UI.ICON_PAD + UI.NAME_COL_W, UI.ROW_H)
-        f.dragZone:EnableMouse(true)
-
-        -- Bind tooltip to dragZone so it shows when mousing over the drag area
-        -- (tooltip will be set later when itemID is assigned to the row)
-        f.dragZone.itemID = nil -- Will be set when row is populated
-
-        -- Use OnMouseDown/Up for immediate drag response (no threshold delay)
-        f.dragZone:SetScript("OnMouseDown", function(self, button)
-            if button ~= "LeftButton" or not f.itemID then return end
-            f.isDragging = true
-            f:SetAlpha(0.9)
-            f:StartMoving()
-        end)
-
-        f.dragZone:SetScript("OnMouseUp", function(self, button)
-            if button ~= "LeftButton" or not f.isDragging then return end
-            f.isDragging = false
-            f:StopMovingOrSizing()
-            f:SetAlpha(1)
-
-            local myMid = (f:GetTop() + f:GetBottom()) / 2
-            local siblings = {}
-            for _, rf in ipairs(rows) do
-                if rf ~= f and rf:IsShown() and rf.itemID then
-                    table.insert(siblings, rf)
-                end
-            end
-            table.sort(siblings, function(a, b) return (a:GetTop() or 0) > (b:GetTop() or 0) end)
-
-            local target = #siblings + 1
-            for i, rf in ipairs(siblings) do
-                local mid = (rf:GetTop() + rf:GetBottom()) / 2
-                if myMid > mid then
-                    target = i; break
-                end
-            end
-
-            local newOrder = {}
-            for i, rf in ipairs(siblings) do
-                if i == target then table.insert(newOrder, f.itemID) end
-                table.insert(newOrder, rf.itemID)
-            end
-            if target == #siblings + 1 then table.insert(newOrder, f.itemID) end
-
-            if Addon.SetRankOrder then Addon:SetRankOrder(newOrder) end
-            Addon:RefreshList()
-            if Addon.SyncOpenMacro then Addon:SyncOpenMacro(true) end
-        end)
-
+        f.buy:Show(); f.open:Show(); f.conf:Show(); f.remove:Show()
+        f.highlight:Hide()
+        f.dragZone.itemID = nil
+        f._inUse = true
+        f:Show()
         return f
     end
+
 
     if #flat == 0 then
         if container.EmptyState then container.EmptyState:Show() end
         content:SetHeight(40); container:SetHeight(math.min(UI.MAX_H, 110))
         if scroll and scroll.ScrollBar then
             scroll.ScrollBar:Hide()
-            scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", 8, -52); scroll:SetPoint("BOTTOMRIGHT", -8, 14)
+            scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", 8, -(container.HeadersY or 52)); scroll:SetPoint("BOTTOMRIGHT", -8, 14)
         end
         self._isRefreshing = false
         return
@@ -294,7 +278,11 @@ function Addon:RefreshList()
             content.cells[#content.cells + 1] = h
         else
             local e = node.data
-            local row = makeRow(content, y)
+            local rowIndex = #rows + 1
+            local row = acquireRow(content, rowIndex)
+            row:ClearAllPoints()
+            row:SetPoint("TOPLEFT", 0, -y)
+            row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
             row.itemID = e.itemID
             row.icon:SetTexture(Addon:GetItemIcon(e.itemID))
             UI.SetTwoLineTruncate(row.name, e.name or ("item:" .. e.itemID), UI.NAME_COL_W, 2)
@@ -432,7 +420,7 @@ function Addon:RefreshList()
     end
     -- Keep scroll frame anchors consistent (always account for scrollbar space)
     scroll:ClearAllPoints()
-    scroll:SetPoint("TOPLEFT", 8, -52)
+    scroll:SetPoint("TOPLEFT", 8, -(container.HeadersY or 52))
     scroll:SetPoint("BOTTOMRIGHT", -28, 14)
 
     -- Finalize checkbox/remove positions now that layout is settled
@@ -450,8 +438,8 @@ function Addon:RefreshList()
         local RAW_CONF = (centers[3] and (centers[3] - offset)) or (RAW_OPEN + UI.COL_W + UI.COL_SP)
         local RAW_REM  = (centers[4] and (centers[4] - offset)) or (RAW_CONF + UI.COL_W + UI.REMOVE_PAD)
 
-        local cbScale  = f.buy and f.buy._crestSizeScale or (UI.CHECKBOX_SCALE or 1)
-        local rmScale  = (f.remove and f.remove._crestSizeScale) or (UI.REMOVE_SCALE or cbScale)
+        local cbScale  = f.buy and f.buy._crestSizeScale or UI.CHECKBOX_SCALE
+        local rmScale  = (f.remove and f.remove._crestSizeScale) or UI.REMOVE_SCALE
 
         local X_BUY    = RAW_BUY
         local X_OPEN   = RAW_OPEN

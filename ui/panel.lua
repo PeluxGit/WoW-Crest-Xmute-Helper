@@ -239,7 +239,7 @@ function Addon:EnsureUI()
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     if UI.SetScaledSize then
-        UI.SetScaledSize(addMode, UI.ADDMODE_SCALE or 0.9)
+        UI.SetScaledSize(addMode, UI.ADDMODE_SCALE)
     end
     addMode:SetPoint("RIGHT", actionButton or container, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)

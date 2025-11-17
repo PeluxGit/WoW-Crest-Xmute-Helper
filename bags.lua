@@ -27,7 +27,7 @@ end
 -- Return distinct tracked+enabled IDs present in bags (dedup by ID), unsorted
 -- limit: stops after collecting up to this many distinct IDs (default 30)
 function Addon:CollectTrackedIDsInBags(limit)
-    limit = limit or 30
+    limit = limit or Addon.MAX_TRACKED_BAG_IDS
     local seen, ids = {}, {}
     for bag = 0, NUM_BAG_SLOTS do
         local slots = C_Container.GetContainerNumSlots(bag)

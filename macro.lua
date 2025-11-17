@@ -4,7 +4,7 @@ local ADDON_NAME, Addon = ...
 
 local MACRO_NAME = "CrestX-Open"
 local MACRO_ICON = "INV_Misc_Bag_10_Black"
-local MAX_BAG_ITEMS = 30 -- Max distinct item IDs to collect from bags for /use lines
+local MAX_BAG_ITEMS = Addon.MAX_TRACKED_BAG_IDS -- Max distinct item IDs to collect from bags for /use lines
 
 Addon.MACRO_NAME = MACRO_NAME
 

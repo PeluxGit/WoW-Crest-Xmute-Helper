@@ -76,7 +76,7 @@ function Addon:CreateMacroActionButton(parent)
     local button = CreateFrame("CheckButton", "CrestXmuteMacroActionButton", anchorParent,
         "ActionButtonTemplate, SecureActionButtonTemplate")
     if UI.SetScaledSize then
-        UI.SetScaledSize(button, UI.ACTIONBUTTON_SCALE or 1)
+        UI.SetScaledSize(button, UI.ACTIONBUTTON_SCALE)
     end
     button:ClearAllPoints()
     button:SetPoint("TOPLEFT", anchorParent, "TOPRIGHT", 0, 0)
