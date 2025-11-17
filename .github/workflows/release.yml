@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       skip_publish:
-        description: 'Skip publishing to CurseForge/Wago (only create zip)'
+        description: "Skip publishing to CurseForge/Wago (only create zip)"
         required: false
         type: boolean
         default: false
@@ -41,6 +41,26 @@ jobs:
           cd ..
           ls -lah "$ZIP_NAME"
 
+      - name: Generate release changelog from CHANGELOG.md
+        run: |
+          set -euo pipefail
+          VERSION="${{ github.ref_name }}"; VERSION="${VERSION#v}"
+          echo "Extracting changelog for version $VERSION"
+          awk -v v="$VERSION" '
+            BEGIN{found=0}
+            /^##[[:space:]]/{
+              if(found) exit
+              if($0 ~ "^##[[:space:]]*" v "\\b") { found=1; next }
+            }
+            { if(found) print }
+          ' CHANGELOG.md | awk 'BEGIN{skip=1} { if(skip && $0 ~ /^##[[:space:]]/) next; skip=0; print }' > CHANGELOG_RELEASE.md || true
+          # Fallback: if no version section matched, use full changelog
+          if [ ! -s CHANGELOG_RELEASE.md ]; then
+            echo "No specific section found; using full CHANGELOG.md"
+            cp CHANGELOG.md CHANGELOG_RELEASE.md
+          fi
+          echo "Final changelog preview:"; head -n 50 CHANGELOG_RELEASE.md
+
       - name: Upload asset to GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -54,3 +74,4 @@ jobs:
         env:
           CF_API_KEY: ${{ secrets.CURSEFORGE_TOKEN }}
           WAGO_API_TOKEN: ${{ secrets.WAGO_TOKEN }}
+          WOWI_API_TOKEN: ${{ secrets.WOWI_TOKEN }}

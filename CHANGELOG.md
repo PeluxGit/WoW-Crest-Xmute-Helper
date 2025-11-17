@@ -1,5 +1,15 @@
 # Changelog
 
+## [2025-11-17]
+
+### Added
+
+- Dedicated CrestX action button embedded in the panel; auto-fires the `CrestX-Open` macro.
+
+### Fixed
+
+- Action button and checkbox borders now render all four sides in ElvUI skins (no more 1px gaps when scaling).
+
 ## [1.0.0] - 2025-11-04
 
 ### Initial Release

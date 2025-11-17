@@ -4,7 +4,8 @@ WoW addon that automates crest transmutation with a single macro.
 
 ## What It Does
 
-Dynamically updates a macro with your next action (buy and/or open), so you can spam one button to automate crest transmutation. Can be expanded with custom items from any vendor (ex.: Delver's Pouches).
+- Dynamically updates a macro (`CrestX-Open`) with your next buy/use action so you can spam one button to automate crest transmutation.
+- Lets you add any other vendor items (ex.: Delver's Pouches) with Buy/Open/Confirm toggles and drag-to-reorder priority.
 
 ## Installation
 
@@ -15,12 +16,9 @@ Dynamically updates a macro with your next action (buy and/or open), so you can 
 
 **Basic workflow for transmutation vendors:**
 
-1. Visit a transmutation vendor (panel appears automatically)
-2. Click macro button (top-right) to pick up the macro
-3. Place macro on action bar
-4. Spam the macro
-
-The addon tracks crest containers automatically. Configure Buy/Open/Confirm toggles if needed (all on by default).
+1. Visit a crest transmutation vendor (panel appears automatically).
+2. Click the button in the top-right of the panel (or drag the `CrestX-Open` macro to your normal action bar, if you want a keybind outside the panel).
+3. Spam the button/macro. The addon tracks crest containers automatically. Configure Buy/Open/Confirm toggles if needed (all on by default).
 
 ## Add Your Own Items
 
@@ -40,7 +38,7 @@ Works with any vendor items, not just crests.
 
 ## How It Works
 
-The addon creates a macro (`CrestX-Open` in the General tab) that you can place on your action bar. Click the macro pickup button (top-right of the panel) to grab it.
+The panel now includes its own secure action button that always references the `CrestX-Open` macro. You can click it directly or ignore it and use the macro from your regular action bars -- the macro is still created/updated under the General tab so it stays in sync with whichever control you prefer.
 
 The macro can do up to two things per click:
 
