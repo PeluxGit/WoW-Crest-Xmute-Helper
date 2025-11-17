@@ -42,6 +42,24 @@ local function ComputeColumns(container)
         container._colCenters[3], container._colCenters[4])
 end
 
+local function ComputeTopChrome(actionButton, addMode, label)
+    local base = 52
+    local function consider(frame, padding)
+        if not frame or not frame.GetHeight then
+            return
+        end
+        local h = frame:GetHeight()
+        if not h or h <= 0 then
+            return
+        end
+        base = math.max(base, math.ceil(h + (padding or 24)))
+    end
+    consider(actionButton, 26)
+    consider(addMode, 22)
+    consider(label, 22)
+    return base
+end
+
 -- Make the container movable without stealing drags from the scroll area
 local function MakeMovable(frame)
     frame:EnableMouse(true)
@@ -166,7 +184,6 @@ function Addon:SetAddMode(flag)
     self._addMode = flag
     if self.Container and self.Container.AddModeBtn then
         self.Container.AddModeBtn:SetChecked(flag)
-        self.Container.AddModeBtn.Label:SetText(flag and "Add Mode: ON" or "Add Mode: OFF")
     end
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
@@ -221,18 +238,22 @@ function Addon:EnsureUI()
     end
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
-    addMode:SetScale(UI.ADDMODE_SCALE or 0.9)
+    if UI.SetScaledSize then
+        UI.SetScaledSize(addMode, UI.ADDMODE_SCALE or 0.9)
+    end
     addMode:SetPoint("RIGHT", actionButton or container, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     lbl:SetPoint("RIGHT", addMode, "LEFT", -4, 0)
-    lbl:SetText("Add Mode: OFF")
+    lbl:SetText("Add Mode")
     addMode.Label = lbl
     container.AddModeBtn = addMode
 
+    container.HeadersY = ComputeTopChrome(actionButton, addMode, lbl)
+
     -- Scroll area now uses almost all available vertical space (button moved to title row).
     local scroll = CreateFrame("ScrollFrame", "CrestXmuteScroll", container, "UIPanelScrollFrameTemplate")
-    scroll:SetPoint("TOPLEFT", 8, -52)
+    scroll:SetPoint("TOPLEFT", 8, -container.HeadersY)
     scroll:SetPoint("BOTTOMRIGHT", -28, 14)
     scroll:EnableMouse(true)
     local content = CreateFrame("Frame", nil, scroll)
@@ -246,7 +267,6 @@ function Addon:EnsureUI()
 
     container.Scroll   = scroll
     container.Content  = content
-    container.HeadersY = 52
 
     -- Compute columns now (fixed layout, no need to recalc on resize)
     ComputeColumns(container)
@@ -261,7 +281,8 @@ function Addon:EnsureUI()
         fs:SetWidth(UI.COL_W)
         fs:SetJustifyH("CENTER")
         fs:ClearAllPoints()
-        fs:SetPoint("TOPLEFT", container, "TOPLEFT", absX, -32)
+        local headerOffset = -(container.HeadersY - 20)
+        fs:SetPoint("TOPLEFT", container, "TOPLEFT", absX, headerOffset)
 
         -- DEBUG: Log header placement AND actual measured positions
         if Addon and Addon.IsDebugEnabled and Addon:IsDebugEnabled("positioning") then

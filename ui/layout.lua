@@ -27,17 +27,57 @@ UI.COL_SP               = 10                -- Space between columns (more breat
 UI.REMOVE_PAD           = 20                -- Space before remove button (extra gap from Confirm)
 UI.SCROLLBAR_RESERVE    = 30                -- Dummy padding after Remove so scrollbar overlaps this space, not the button
 
-UI.CHECKBOX_SCALE       = 0.7
-UI.ADDMODE_SCALE        = 0.9
-UI.REMOVE_SCALE         = 0.7
+UI.CHECKBOX_SCALE       = 0.75
+UI.ADDMODE_SCALE        = 0.75
+UI.REMOVE_SCALE         = 0.75
 UI.ACTIONBUTTON_SCALE   = 0.65
+
+-- Resize a frame based on a scale factor without using SetScale (helps keep pixel-perfect borders)
+function UI.SetScaledSize(frame, scale, fallback)
+    if not frame or not frame.SetSize then
+        return
+    end
+
+    if type(scale) ~= "number" or scale <= 0 then
+        scale = 1
+    end
+
+    local baseW = frame._crestBaseWidth
+    local baseH = frame._crestBaseHeight
+    if not baseW or baseW <= 0 or not baseH or baseH <= 0 then
+        local measuredW, measuredH = frame:GetSize()
+        if not measuredW or measuredW <= 0 then
+            measuredW = frame.GetWidth and frame:GetWidth() or 0
+        end
+        if not measuredH or measuredH <= 0 then
+            measuredH = frame.GetHeight and frame:GetHeight() or 0
+        end
+
+        local fallbackW, fallbackH
+        if type(fallback) == "table" then
+            fallbackW = fallback.width or fallback[1]
+            fallbackH = fallback.height or fallback[2] or fallbackW
+        elseif type(fallback) == "number" then
+            fallbackW = fallback
+            fallbackH = fallback
+        end
+
+        baseW = (measuredW and measuredW > 0) and measuredW or fallbackW or 32
+        baseH = (measuredH and measuredH > 0) and measuredH or fallbackH or 32
+        frame._crestBaseWidth = baseW
+        frame._crestBaseHeight = baseH
+    end
+
+    frame:SetSize(baseW * scale, baseH * scale)
+    frame._crestSizeScale = scale
+end
 
 -- Fallback absolute X positions in row space (CENTER-to-LEFT anchor)
 -- These reproduce the empirically tuned look if measurement/scaling is unavailable
-UI.X_BUY                = 320
-UI.X_OPEN               = 370
-UI.X_CONF               = 420
-UI.X_REMOVE             = 480
+UI.X_BUY    = 320
+UI.X_OPEN   = 370
+UI.X_CONF   = 420
+UI.X_REMOVE = 480
 
 -- ===== Small helpers (used by list.lua) =====
 

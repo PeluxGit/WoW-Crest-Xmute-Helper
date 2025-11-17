@@ -167,9 +167,11 @@ function Addon:RefreshList()
         f.open = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
         f.conf = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
 
-        f.buy:SetScale(CHECKBOX_SCALE)
-        f.open:SetScale(CHECKBOX_SCALE)
-        f.conf:SetScale(CHECKBOX_SCALE)
+        if UI.SetScaledSize then
+            UI.SetScaledSize(f.buy, CHECKBOX_SCALE)
+            UI.SetScaledSize(f.open, CHECKBOX_SCALE)
+            UI.SetScaledSize(f.conf, CHECKBOX_SCALE)
+        end
 
         -- Set frame level to ensure they're visible above the background
         local baseLevel = f:GetFrameLevel()
@@ -185,7 +187,9 @@ function Addon:RefreshList()
         -- Prepare remove button early so its scale can be accounted for in X positioning
         if not f.remove then
             f.remove = CreateFrame("Button", nil, f, "UIPanelCloseButtonNoScripts")
-            f.remove:SetScale(UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+            if UI.SetScaledSize then
+                UI.SetScaledSize(f.remove, UI.REMOVE_SCALE or UI.CHECKBOX_SCALE or 0.7)
+            end
             f.remove:SetFrameLevel((f:GetFrameLevel() or 1) + 20)
         end
 
@@ -446,18 +450,13 @@ function Addon:RefreshList()
         local RAW_CONF = (centers[3] and (centers[3] - offset)) or (RAW_OPEN + UI.COL_W + UI.COL_SP)
         local RAW_REM  = (centers[4] and (centers[4] - offset)) or (RAW_CONF + UI.COL_W + UI.REMOVE_PAD)
 
-        local cbScale  = f.buy:GetScale() or (UI.CHECKBOX_SCALE or 1)
-        if cbScale == 0 then cbScale = 1 end
-        local rmScale = (f.remove and f.remove:GetScale()) or (UI.REMOVE_SCALE or cbScale)
-        if rmScale == 0 then rmScale = 1 end
-        local cbCorr   = 1 / cbScale
-        local rmCorr   = 1 / rmScale
+        local cbScale  = f.buy and f.buy._crestSizeScale or (UI.CHECKBOX_SCALE or 1)
+        local rmScale  = (f.remove and f.remove._crestSizeScale) or (UI.REMOVE_SCALE or cbScale)
 
-        local X_BUY    = cbCorr * RAW_BUY
-        local X_OPEN   = cbCorr * RAW_OPEN
-        local X_CONF   = cbCorr * RAW_CONF
-        local X_REM    = rmCorr * RAW_REM
-        local X_REMOVE = X_REM - (UI.SCROLLBAR_RESERVE or 30)
+        local X_BUY    = RAW_BUY
+        local X_OPEN   = RAW_OPEN
+        local X_CONF   = RAW_CONF
+        local X_REMOVE = RAW_REM - (UI.SCROLLBAR_RESERVE or 30)
 
         f.buy:ClearAllPoints(); f.buy:SetPoint("CENTER", f, "LEFT", X_BUY, 0)
         f.open:ClearAllPoints(); f.open:SetPoint("CENTER", f, "LEFT", X_OPEN, 0)

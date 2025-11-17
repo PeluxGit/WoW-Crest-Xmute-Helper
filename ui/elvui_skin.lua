@@ -9,8 +9,8 @@ local ElvUI = _G.ElvUI
 local unpack = _G.unpack
 
 -- ElvUI-specific scale multipliers (relative to base UI constants)
-local ELVUI_ADDMODE_SCALE_MULT = 0.83  -- Add Mode checkbox: 0.75 / 0.9 base
-local ELVUI_CHECKBOX_SCALE_MULT = 0.86 -- Row checkboxes: 0.6 / 0.7 base
+local ELVUI_ADDMODE_SCALE_MULT = 1  -- Add Mode checkbox: 0.75 / 0.9 base
+local ELVUI_CHECKBOX_SCALE_MULT = 1 -- Row checkboxes: 0.6 / 0.7 base
 
 -- ElvUI styling constants
 local ELVUI_ICON_CROP = { 0.08, 0.92, 0.08, 0.92 } -- Icon crop coords for square appearance
@@ -198,7 +198,9 @@ local function ApplyElvUISkin()
             end
             -- Scale down for ElvUI relative to base ADDMODE_SCALE
             local baseScale = UI.ADDMODE_SCALE or 0.9
-            container.AddModeBtn:SetScale(baseScale * ELVUI_ADDMODE_SCALE_MULT)
+            if UI.SetScaledSize then
+                UI.SetScaledSize(container.AddModeBtn, baseScale * ELVUI_ADDMODE_SCALE_MULT)
+            end
             -- Only set background color for unchecked state
             if container.AddModeBtn.backdrop then
                 local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
@@ -239,7 +241,9 @@ local function ApplyElvUISkin()
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                         local baseScale = UI.CHECKBOX_SCALE or 0.7
-                        cell.buy:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        if UI.SetScaledSize then
+                            UI.SetScaledSize(cell.buy, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        end
                         -- Only set background color for unchecked state
                         if cell.buy.backdrop then
                             local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
@@ -260,7 +264,9 @@ local function ApplyElvUISkin()
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                         local baseScale = UI.CHECKBOX_SCALE or 0.7
-                        cell.open:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        if UI.SetScaledSize then
+                            UI.SetScaledSize(cell.open, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        end
                         -- Only set background color for unchecked state
                         if cell.open.backdrop then
                             local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
@@ -281,7 +287,9 @@ local function ApplyElvUISkin()
                     else
                         -- Scale down row checkboxes for ElvUI relative to base CHECKBOX_SCALE
                         local baseScale = UI.CHECKBOX_SCALE or 0.7
-                        cell.conf:SetScale(baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        if UI.SetScaledSize then
+                            UI.SetScaledSize(cell.conf, baseScale * ELVUI_CHECKBOX_SCALE_MULT)
+                        end
                         -- Only set background color for unchecked state
                         if cell.conf.backdrop then
                             local backdropColor = E.media.backdropcolor or ELVUI_BACKDROP_FALLBACK
