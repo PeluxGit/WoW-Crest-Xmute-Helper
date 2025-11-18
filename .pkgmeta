@@ -1,4 +1,4 @@
-package-as: CrestXmuteHelper
+package-as: "__ADDON_FOLDER__"
 
 enable-nolib-creation: no
 
@@ -11,7 +11,7 @@ ignore:
     - .pkgmeta
 
 # Use curated changelog content for provider release notes
-changelog-title: Crest Xmute Helper v@project-version@
+changelog-title: "__ADDON_TITLE__ v@project-version@"
 manual-changelog: CHANGELOG_RELEASE.md
 
 # WoWInterface-specific behavior: we'll use manual changelog and convert markdown

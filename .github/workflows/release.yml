@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       skip_publish:
-        description: "Skip publishing to CurseForge/Wago (only create zip)"
+        description: "Only create zip, don't push to addon services"
         required: false
         type: boolean
         default: false
@@ -17,27 +17,50 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # Folder name WoW uses (also the root directory placed inside the release zip)
+      ADDON_FOLDER: ${{ vars.ADDON_FOLDER || github.event.repository.name }}
+      # Friendly display name used in changelog titles and release text
+      ADDON_TITLE: ${{ vars.ADDON_TITLE || vars.ADDON_FOLDER || github.event.repository.name }}
+      # TOC filename assumed to match the addon folder by convention
+      TOC_FILE: ${{ format('{0}.toc', vars.ADDON_FOLDER || github.event.repository.name) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Resolve pkgmeta template values
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path(".pkgmeta")
+          text = path.read_text()
+          replacements = {
+              "__ADDON_FOLDER__": "${{ env.ADDON_FOLDER }}",
+              "__ADDON_TITLE__": "${{ env.ADDON_TITLE }}"
+          }
+          for key, value in replacements.items():
+              text = text.replace(key, value)
+          path.write_text(text)
+          PY
 
       - name: Update TOC version from tag
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          sed -i "s/^## Version: .*/## Version: $VERSION/" CrestXmuteHelper.toc
-          echo "Updated TOC to version $VERSION"
+          sed -i "s/^## Version: .*/## Version: $VERSION/" "$TOC_FILE"
+          echo "Updated $TOC_FILE to version $VERSION"
 
       - name: Create addon zip
         run: |
           set -euxo pipefail
-          ZIP_NAME="CrestXmuteHelper-${{ github.ref_name }}.zip"
+          ZIP_NAME="${ADDON_FOLDER}-${{ github.ref_name }}.zip"
           # Create a temp directory with addon structure
-          mkdir -p package/CrestXmuteHelper
+          mkdir -p "package/${ADDON_FOLDER}"
           # Copy all addon files (excluding repo metadata)
-          rsync -av --exclude='.git' --exclude='.github' --exclude='.gitignore' --exclude='.pkgmeta' --exclude='.vscode' --exclude='.luarc.json' --exclude='LICENSE' --exclude='README.md' --exclude='CHANGELOG.md' ./ package/CrestXmuteHelper/
+          rsync -av --exclude='.git' --exclude='.github' --exclude='.gitignore' --exclude='.pkgmeta' --exclude='.vscode' --exclude='.luarc.json' --exclude='LICENSE' --exclude='README.md' --exclude='CHANGELOG.md' ./ "package/${ADDON_FOLDER}/"
           cd package
-          zip -r "../$ZIP_NAME" CrestXmuteHelper
+          zip -r "../$ZIP_NAME" "${ADDON_FOLDER}"
           cd ..
           ls -lah "$ZIP_NAME"
 
@@ -64,12 +87,34 @@ jobs:
       - name: Upload asset to GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: CrestXmuteHelper-${{ github.ref_name }}.zip
+          files: ${{ env.ADDON_FOLDER }}-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to CurseForge and Wago
-        if: ${{ !inputs.skip_publish && !github.event.release.prerelease }}
+      - name: Determine publish targets
+        id: publish_targets
+        run: |
+          set -euo pipefail
+          has_any=false
+          if [ -n "${{ secrets.CURSEFORGE_TOKEN }}" ]; then
+            echo "has_cf=true" >> "$GITHUB_OUTPUT"
+            has_any=true
+          fi
+          if [ -n "${{ secrets.WAGO_TOKEN }}" ]; then
+            echo "has_wago=true" >> "$GITHUB_OUTPUT"
+            has_any=true
+          fi
+          if [ -n "${{ secrets.WOWI_TOKEN }}" ]; then
+            echo "has_wowi=true" >> "$GITHUB_OUTPUT"
+            has_any=true
+          fi
+          echo "has_any=$has_any" >> "$GITHUB_OUTPUT"
+          if [ "$has_any" = false ]; then
+            echo "No provider tokens detected; skipping packager step."
+          fi
+
+      - name: Publish to addon services
+        if: ${{ !inputs.skip_publish && !github.event.release.prerelease && steps.publish_targets.outputs.has_any == 'true' }}
         uses: BigWigsMods/packager@v2
         env:
           CF_API_KEY: ${{ secrets.CURSEFORGE_TOKEN }}
