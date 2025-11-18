@@ -38,7 +38,7 @@ Works with any vendor items, not just crests.
 
 ## How It Works
 
-The panel now includes its own secure action button that always references the `CrestX-Open` macro. You can click it directly or ignore it and use the macro from your regular action bars -- the macro is still created/updated under the General tab so it stays in sync with whichever control you prefer.
+The panel now includes its own button that always references the `CrestX-Open` macro. You can click it directly or ignore it and use the macro from your regular action bars, the macro is still created/updated under the General tab so it stays in sync with whichever control you prefer.
 
 The macro can do up to two things per click:
 
