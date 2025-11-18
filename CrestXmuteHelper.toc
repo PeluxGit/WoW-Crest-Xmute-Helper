@@ -2,7 +2,7 @@
 ## Title: Crest Xmute Helper
 ## Notes: Spammable macro builder for crest transmutation: buy + open
 ## Author: PeluxGit
-## Version: 2025-11-17
+## Version: v2025-11-17
 ## SavedVariables: CrestXmuteDB
 ## X-Curse-Project-ID: 1378586
 ## X-Curse-Project-Slug: crest-xmute-helper
