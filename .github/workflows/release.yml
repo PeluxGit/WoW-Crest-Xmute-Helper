@@ -50,7 +50,7 @@ jobs:
             BEGIN{found=0}
             /^##[[:space:]]/{
               if(found) exit
-              if($0 ~ "^##[[:space:]]*" v "\\b") { found=1; next }
+              if($0 ~ "^##[[:space:]]*\\[[[:space:]]*" v "[[:space:]]*\\]") { found=1; next }
             }
             { if(found) print }
           ' CHANGELOG.md | awk 'BEGIN{skip=1} { if(skip && $0 ~ /^##[[:space:]]/) next; skip=0; print }' > CHANGELOG_RELEASE.md || true
