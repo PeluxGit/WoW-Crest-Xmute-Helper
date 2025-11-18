@@ -9,16 +9,16 @@
 ## X-Wago-ID: E6gLxRK1
 ## X-WoWI-ID: 26978
 
-debug.lua
-core.lua
-merchant.lua
-bags.lua
-tracking.lua
-events.lua
-macro.lua
-ui/layout.lua
-ui/panel.lua
-ui/list.lua
-ui/action_button.lua
-ui/elvui_skin.lua
-slash.lua
+src/debug.lua
+src/core.lua
+src/merchant.lua
+src/bags.lua
+src/tracking.lua
+src/events.lua
+src/macro.lua
+src/ui/layout.lua
+src/ui/panel.lua
+src/ui/list.lua
+src/ui/action_button.lua
+src/ui/elvui_skin.lua
+src/slash.lua
