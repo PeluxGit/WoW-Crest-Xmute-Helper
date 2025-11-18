@@ -138,6 +138,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Update GitHub release notes
+        if: ${{ github.event_name == 'release' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ github.event.release.tag_name }}" \
+            --repo "${{ github.repository }}" \
+            --notes-file CHANGELOG_RELEASE.md
+
       - name: Determine publish targets
         id: publish_targets
         run: |
