@@ -3,12 +3,9 @@ package-as: "__ADDON_FOLDER__"
 enable-nolib-creation: no
 
 ignore:
-    - README.md
-    - LICENSE
-    - .git
-    - .github
-    - .gitignore
-    - .pkgmeta
+    # Filled by release workflow from packager-ignore.yml
+    __PACKAGER_IGNORE__
+
 
 # Use curated changelog content for provider release notes
 changelog-title: "__ADDON_TITLE__ v@project-version@"
