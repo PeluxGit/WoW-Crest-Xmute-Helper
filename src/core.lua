@@ -5,9 +5,6 @@ if not Addon then
     Addon = {}; _G[ADDON_NAME] = Addon
 end
 
--- SavedVariables (CrestXmuteDB will be initialized by WoW before ADDON_LOADED fires)
--- Do NOT reference it here or it may interfere with WoW's loading mechanism
-
 -- Initialize debug system from saved state
 function Addon:EnsureDebug()
     if self.InitDebug then
