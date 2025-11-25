@@ -13,9 +13,11 @@ on:
 
 jobs:
   release:
-    uses: PeluxGit/wow-addon-release-workflows/.github/workflows/addon-release.yml@v1
+    permissions:
+      contents: write
+    uses: PeluxGit/wow-addon-release-workflows/.github/workflows/addon-release.yml@main
     with:
       addon_folder: ${{ vars.ADDON_FOLDER || github.event.repository.name }}
       addon_title: ${{ vars.ADDON_TITLE || vars.ADDON_FOLDER || github.event.repository.name }}
-      skip_publish: ${{ inputs.skip_publish || false }}
+      skip_publish: ${{ github.event_name == 'workflow_dispatch' && inputs.skip_publish || false }}
     secrets: inherit
