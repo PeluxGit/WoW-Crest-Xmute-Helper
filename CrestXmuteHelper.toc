@@ -1,4 +1,4 @@
-## Interface: 110205
+## Interface: 120000
 ## Title: Crest Xmute Helper
 ## Notes: Spammable macro builder for crest transmutation: buy + open
 ## Author: PeluxGit

@@ -2,14 +2,20 @@
 -- Affordability and merchant-side helpers
 local ADDON_NAME, Addon = ...
 
--- Robust affordability check for a merchant line index.
+-- Affordability check for a merchant line index.
 -- Considers:
 -- - isPurchasable: vendor says it's purchasable (filters one-time/locked purchases)
 -- - isUsable: vendor says player can use/buy it
 -- - numAvailable: limited stock availability
 -- - All cost lines: currencies, currency-links, or item costs vs player amounts
 local function PlayerCanAfford(idx)
-    local _, _, _, _, numAvailable, isPurchasable, isUsable = GetMerchantItemInfo(idx)
+    local info = C_MerchantFrame.GetItemInfo(idx)
+    if not info then
+        return false
+    end
+    local numAvailable = info.numAvailable
+    local isPurchasable = info.isPurchasable
+    local isUsable = info.isUsable
     -- Validate that we got valid data from GetMerchantItemInfo
     if isPurchasable == nil and isUsable == nil then
         -- No valid merchant data

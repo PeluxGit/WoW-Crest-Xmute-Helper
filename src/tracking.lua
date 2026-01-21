@@ -160,7 +160,8 @@ function Addon:CollectTrackedMerchantEntries_All()
     local out, tracked = {}, self:GetTrackedUnion()
     local n = GetMerchantNumItems() or 0
     for idx = 1, n do
-        local name, _, _, numAvailable, isPurchasable, isUsable = GetMerchantItemInfo(idx)
+        local info = C_MerchantFrame.GetItemInfo(idx)
+        local name = info and info.name
         if not name then
             -- Invalid merchant item data at this index
             if Addon.Debug and Addon.Debug.DebugPrintCategory then
@@ -177,9 +178,9 @@ function Addon:CollectTrackedMerchantEntries_All()
                     itemID = itemID,
                     name = name or ("item:" .. itemID),
                     icon = Addon:GetItemIcon(itemID),
-                    numAvailable = numAvailable,
-                    isPurchasable = isPurchasable,
-                    isUsable = isUsable,
+                    numAvailable = info and info.numAvailable or nil,
+                    isPurchasable = info and info.isPurchasable or nil,
+                    isUsable = info and info.isUsable or nil,
                     affordable = affordable,
                 })
             end
