@@ -98,6 +98,18 @@ function Addon:CreateMacroActionButton(parent)
     button.SlotBackground = button.SlotBackground or _G[button:GetName() .. "SlotBackground"]
     HideDefaultHighlights(button)
 
+    if button.NormalTexture then
+        button.NormalTexture:ClearAllPoints()
+        button.NormalTexture:SetPoint("TOPLEFT", button, "TOPLEFT", -1, 1)
+        button.NormalTexture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 7, -7)
+    end
+
+    if button.icon then
+        button.icon:ClearAllPoints()
+        button.icon:SetAllPoints(button)
+        button.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    end
+
     local highlightTex = button:GetHighlightTexture()
     if highlightTex then
         highlightTex:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
