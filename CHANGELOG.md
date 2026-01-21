@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-01-21]
+
+### Changed
+
+- Updated interface version to 120000 and migrated merchant item info to `C_MerchantFrame.GetItemInfo`.
+
+### Fixed
+
+- Default skin column header spacing so "Confirm" no longer truncates.
+- Macro action button border sizing now matches the icon in the default skin.
+
 ## [2025-11-17]
 
 ### Added
