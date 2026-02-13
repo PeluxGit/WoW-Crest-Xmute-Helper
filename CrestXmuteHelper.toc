@@ -1,10 +1,11 @@
 ## Interface: 120001
 ## Title: Crest Xmute Helper
 ## Notes: Spammable macro builder for crest transmutation: buy + open
-## Category: User Interface
 ## Author: PeluxGit
-## Version: v2026-02-13
+## Version: {current version}
 ## SavedVariables: CrestXmuteDB
+## Category: User Interface
+## DefaultState: enabled
 ## X-Website: https://github.com/PeluxGit/WoW-Crest-Xmute-Helper
 ## X-Curse-Project-ID: 1378586
 ## X-Wago-ID: E6gLxRK1
