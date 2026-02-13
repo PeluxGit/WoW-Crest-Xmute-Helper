@@ -5,8 +5,8 @@
 ## Author: PeluxGit
 ## Version: v2026-02-13
 ## SavedVariables: CrestXmuteDB
+## X-Website: https://github.com/PeluxGit/WoW-Crest-Xmute-Helper
 ## X-Curse-Project-ID: 1378586
-## X-Curse-Project-Slug: crest-xmute-helper
 ## X-Wago-ID: E6gLxRK1
 ## X-WoWI-ID: 26978
 
