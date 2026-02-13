@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-02-13]
+
+### Changed
+
+- Update interface version to 120001 and adjust category in .toc file
+
 ## [2026-01-21]
 
 ### Changed
