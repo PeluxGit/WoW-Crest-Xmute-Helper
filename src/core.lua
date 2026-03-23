@@ -15,9 +15,9 @@ end
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
 Addon.DEFAULT_SEED = {
-    240931,
-    240930,
-    240929,
+    263977, -- confirmed
+    263978, -- unverified
+    263979, -- unverified
 }
 
 -- Shared constants
