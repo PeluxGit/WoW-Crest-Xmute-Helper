@@ -16,7 +16,7 @@ end
 -- Replace these IDs when a new season starts (crest pack/container IDs)
 Addon.DEFAULT_SEED = {
     263977, -- confirmed
-    263978, -- unverified
+    246751, -- confirmed
     263979, -- unverified
 }
 
