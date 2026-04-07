@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-04-07]
+
+### Changed
+
+- Updated default item IDs for the new season (4 crest pack types)
+
 ## [2026-02-13]
 
 ### Changed
