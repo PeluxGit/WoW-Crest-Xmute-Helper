@@ -14,11 +14,12 @@ end
 
 -- ==== Season seed ====
 -- Replace these IDs when a new season starts (crest pack/container IDs)
+-- Midnight Season 2
 Addon.DEFAULT_SEED = {
-    263977,
-    246751,
-    246752,
-    246753
+    269867, -- Venerable Satchel of Veteran Mistcrests
+    269864, -- Triumphant Satchel of Champion Mistcrests
+    269865, -- Celebratory Pack of Hero Mistcrests
+    269866  -- Glorious Cluster of Myth Mistcrests
 }
 
 -- Shared constants
