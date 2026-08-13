@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-08-12]
+
+### Changed
+
+- Updated default item IDs for the Midnight Season 2
+
 ## [2026-04-07]
 
 ### Changed
