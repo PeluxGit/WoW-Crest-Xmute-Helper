@@ -10,6 +10,7 @@
 ## X-Curse-Project-ID: 1378586
 ## X-Wago-ID: E6gLxRK1
 ## X-WoWI-ID: 26978
+## OptionalDeps: EllesmereUI
 
 src/debug.lua
 src/core.lua
@@ -23,4 +24,5 @@ src/ui/panel.lua
 src/ui/list.lua
 src/ui/action_button.lua
 src/ui/elvui_skin.lua
+src/ui/ellesmere_skin.lua
 src/slash.lua

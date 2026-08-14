@@ -255,6 +255,7 @@ function Addon:RefreshList()
             h:SetSize(1, UI.ROW_H - 6); h:SetPoint("TOPLEFT", 0, -y) -- Anchor at content edge
             local fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             fs:SetPoint("LEFT", UI.LEFT_PAD, 0)
+            h.text = fs
             local key, text = node.key, nil
             if key:find("^currency:") then
                 local curID = tonumber(key:match("currency:(%d+)"))

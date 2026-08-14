@@ -229,6 +229,7 @@ function Addon:EnsureUI()
     local title = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetText("Crest Xmute Helper")
+    container.Title = title
 
     -- Create macro action button (single-slot action bar)
     local actionButton = self:CreateMacroActionButton(container)
@@ -324,6 +325,7 @@ function Addon:EnsureUI()
     local head = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     head:SetPoint("TOPLEFT", UI.LEFT_PAD, -32)
     head:SetText("Vendor Items")
+    container.Header = head
 
     local empty = container:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     empty:SetPoint("TOPLEFT", 16, -70)

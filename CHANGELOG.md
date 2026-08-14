@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-08-13]
+
+### Added
+
+- EllesmereUI skin support.
+
 ## [2026-08-12]
 
 ### Changed

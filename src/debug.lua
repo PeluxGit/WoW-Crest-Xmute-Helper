@@ -11,7 +11,7 @@ local DEFAULT_DEBUG = {
     macro = false,       -- Log macro updates
     tracking = false,    -- Log item tracking changes
     ui = false,          -- Log UI operations
-    skin = false,        -- Force default skin (disable custom skins like ElvUI)
+    skin = false,        -- Force default skin (disable custom skins like ElvUI/EllesmereUI)
 }
 
 -- Initialize debug state (called after SavedVariables are loaded)
@@ -127,7 +127,7 @@ function Addon:PrintDebugHelp()
         elseif key == "ui" then
             desc = " - Log UI operations"
         elseif key == "skin" then
-            desc = " - Force default skin (disable ElvUI)"
+            desc = " - Force default skin (disable ElvUI/EllesmereUI)"
         end
         print("  |cffffd200" .. key .. "|r" .. desc)
     end
