@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-08-15]
+
+### Fixed
+
+- Fixed EllesmereUI skin.
+
 ## [2026-08-13]
 
 ### Added

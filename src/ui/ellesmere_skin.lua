@@ -5,6 +5,8 @@ local ADDON_NAME, Addon = ...
 local _G = _G
 local hooksecurefunc = _G.hooksecurefunc
 ---@diagnostic disable-next-line: undefined-field
+local PixelUtil = _G.PixelUtil
+---@diagnostic disable-next-line: undefined-field
 local EllesmereUI = _G.EllesmereUI
 
 -- Nothing to do if EllesmereUI isn't installed or predates the skinning API
@@ -12,14 +14,15 @@ if not (EllesmereUI and EllesmereUI.RegisterSkin) then return end
 
 local UI = Addon.UI or {}
 
--- EllesmereUI-specific scale multipliers (relative to base UI constants) --
--- the flat filled-square toggle style reads visually larger than Blizzard's
--- thin-bordered checkbox at the same pixel size, so shrink it down.
+-- EllesmereUI-specific scale multipliers, relative to the base UI constants
 local EUI_CHECKBOX_SCALE_MULT = 0.7
 local EUI_ADDMODE_SCALE_MULT = 0.7
 
 -- Gap (px) between the checked-state accent fill and the checkbox border
-local EUI_CHECK_INSET = 3
+local EUI_CHECK_INSET = 2.5
+
+-- Outward bleed (px) so our background fill meets EUI's border art
+local EUI_BG_BLEED = 1
 
 -- Set once EllesmereUI invokes our registered callback; primitives are idempotent
 -- so it's safe to call them again from refresh hooks once this is populated.
@@ -40,34 +43,29 @@ local function FontOnly(fs)
     if S.Font then S.Font(fs) end
 end
 
--- S.Checkbox() only skins the box/border and leaves Blizzard's own gold
--- checkmark glyph alone, and its default box fill renders solid black
--- rather than EUI's actual grey panel fill. We want the flat "hollow
--- square / solid-filled square" toggle style used elsewhere in EUI's QoL
--- addons instead of a checkmark glyph, so:
---   - draw our own BACKGROUND-layer fill using the house panel color,
---     flush with the border (this sits under S.Checkbox's border art
---     since it's created after, on the same draw layer)
---   - replace the checked-texture with a plain accent-color fill, inset
---     further than the panel fill so the border stays visible when on
--- stockCheck=true tells EUI not to touch the check texture itself, since
--- we're fully replacing it. Re-read colors every call (rather than caching
--- them) so S.OnLooksChanged-driven re-skins stay live.
+-- Skins the box/border via S.Checkbox(), then replaces Blizzard's gold
+-- checkmark glyph with a flat accent-color fill (EUI's toggle style) and
+-- paints our own background behind it. Colors are re-read every call so
+-- live S.OnLooksChanged theme changes stay in sync.
 local function FlattenCheckbox(checkbox)
     if not S or not checkbox then return end
     S.Checkbox(checkbox, { stockCheck = true })
 
-    -- Blizzard's own unchecked-state art (UICheckButtonTemplate's
-    -- NormalTexture: a silver-framed, black-inset square) draws above our
-    -- background fill and was still showing through, which is the "black
-    -- box" that persisted after the panel-color fix. Clear it.
-    if checkbox.SetNormalTexture then
-        checkbox:SetNormalTexture(nil)
+    -- SetNormalTexture(nil) errors on current clients; clear the region directly.
+    local normalTex = checkbox.GetNormalTexture and checkbox:GetNormalTexture()
+    if normalTex then
+        normalTex:SetTexture(nil)
     end
 
     if not checkbox._cxhBg then
         checkbox._cxhBg = checkbox:CreateTexture(nil, "BACKGROUND")
-        checkbox._cxhBg:SetAllPoints(checkbox)
+        if PixelUtil and PixelUtil.SetPoint then
+            PixelUtil.SetPoint(checkbox._cxhBg, "TOPLEFT", checkbox, "TOPLEFT", -EUI_BG_BLEED, EUI_BG_BLEED)
+            PixelUtil.SetPoint(checkbox._cxhBg, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", EUI_BG_BLEED, -EUI_BG_BLEED)
+        else
+            checkbox._cxhBg:SetPoint("TOPLEFT", checkbox, "TOPLEFT", -EUI_BG_BLEED, EUI_BG_BLEED)
+            checkbox._cxhBg:SetPoint("BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", EUI_BG_BLEED, -EUI_BG_BLEED)
+        end
     end
     local pr, pg, pb, pa = 0.16, 0.16, 0.16, 1
     if S.GetPanelColor then
@@ -85,8 +83,14 @@ local function FlattenCheckbox(checkbox)
     checked:SetTexture(nil)
     checked:SetColorTexture(r, g, b, 1)
     checked:ClearAllPoints()
-    checked:SetPoint("TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
-    checked:SetPoint("BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
+    -- PixelUtil.SetPoint pixel-snaps the inset so it doesn't drift off the border.
+    if PixelUtil and PixelUtil.SetPoint then
+        PixelUtil.SetPoint(checked, "TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
+        PixelUtil.SetPoint(checked, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
+    else
+        checked:SetPoint("TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
+        checked:SetPoint("BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
+    end
 end
 
 local function SkinContainer()
