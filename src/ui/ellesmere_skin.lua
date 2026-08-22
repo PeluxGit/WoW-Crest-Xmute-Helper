@@ -4,6 +4,7 @@ local ADDON_NAME, Addon = ...
 -- WoW API globals referenced in this module (accessed via _G for static analysis friendliness)
 local _G = _G
 local hooksecurefunc = _G.hooksecurefunc
+local unpack = _G.unpack
 ---@diagnostic disable-next-line: undefined-field
 local PixelUtil = _G.PixelUtil
 ---@diagnostic disable-next-line: undefined-field
@@ -27,6 +28,9 @@ local EUI_BORDER_COLOR = { 1, 1, 1, 0.35 }
 -- Translucent fill, same technique, paler than S.GetPanelColor()
 local EUI_CHECKBOX_BG = { 1, 1, 1, 0.1 }
 
+-- Stock CheckButton textures cleared before drawing our own box/border
+local STOCK_TEXTURE_GETTERS = { "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }
+
 -- Set when EllesmereUI's skin callback fires
 local S
 
@@ -48,37 +52,34 @@ local function FontOnly(fs)
     if S.Font then S.Font(fs) end
 end
 
+-- Pixel-snaps via PixelUtil when available, falling back to a plain SetPoint
+local function SetPointPixel(tex, point, relTo, relPoint, x, y)
+    if PixelUtil and PixelUtil.SetPoint then
+        PixelUtil.SetPoint(tex, point, relTo, relPoint, x, y)
+    else
+        tex:SetPoint(point, relTo, relPoint, x, y)
+    end
+end
+
 -- 1px pixel-snapped hairline along one edge (top or bottom)
 local function AnchorHorizontalHairline(tex, checkbox, corner1, corner2)
-    if PixelUtil and PixelUtil.SetPoint then
-        PixelUtil.SetPoint(tex, corner1, checkbox, corner1, 0, 0)
-        PixelUtil.SetPoint(tex, corner2, checkbox, corner2, 0, 0)
-        PixelUtil.SetHeight(tex, 1)
-    else
-        tex:SetPoint(corner1, checkbox, corner1, 0, 0)
-        tex:SetPoint(corner2, checkbox, corner2, 0, 0)
-        tex:SetHeight(1)
-    end
+    SetPointPixel(tex, corner1, checkbox, corner1, 0, 0)
+    SetPointPixel(tex, corner2, checkbox, corner2, 0, 0)
+    if PixelUtil and PixelUtil.SetHeight then PixelUtil.SetHeight(tex, 1) else tex:SetHeight(1) end
 end
 
 -- Inset 1px so corners don't double-overlap the horizontal hairlines
 local function AnchorVerticalHairline(tex, checkbox, topCorner, bottomCorner)
-    if PixelUtil and PixelUtil.SetPoint then
-        PixelUtil.SetPoint(tex, topCorner, checkbox, topCorner, 0, -1)
-        PixelUtil.SetPoint(tex, bottomCorner, checkbox, bottomCorner, 0, 1)
-        PixelUtil.SetWidth(tex, 1)
-    else
-        tex:SetPoint(topCorner, checkbox, topCorner, 0, -1)
-        tex:SetPoint(bottomCorner, checkbox, bottomCorner, 0, 1)
-        tex:SetWidth(1)
-    end
+    SetPointPixel(tex, topCorner, checkbox, topCorner, 0, -1)
+    SetPointPixel(tex, bottomCorner, checkbox, bottomCorner, 0, 1)
+    if PixelUtil and PixelUtil.SetWidth then PixelUtil.SetWidth(tex, 1) else tex:SetWidth(1) end
 end
 
 -- Draws box/border manually; S.Checkbox()'s own border is opaque and too thick here
 local function FlattenCheckbox(checkbox)
     if not S or not checkbox then return end
 
-    for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+    for _, getter in ipairs(STOCK_TEXTURE_GETTERS) do
         local tex = checkbox[getter] and checkbox[getter](checkbox)
         if tex then tex:SetTexture(nil) end
     end
@@ -87,7 +88,7 @@ local function FlattenCheckbox(checkbox)
         checkbox._cxhBg = checkbox:CreateTexture(nil, "BACKGROUND")
         checkbox._cxhBg:SetAllPoints(checkbox)
     end
-    checkbox._cxhBg:SetColorTexture(EUI_CHECKBOX_BG[1], EUI_CHECKBOX_BG[2], EUI_CHECKBOX_BG[3], EUI_CHECKBOX_BG[4])
+    checkbox._cxhBg:SetColorTexture(unpack(EUI_CHECKBOX_BG))
 
     if not checkbox._cxhBorder then
         checkbox._cxhBorder = {
@@ -103,7 +104,7 @@ local function FlattenCheckbox(checkbox)
         AnchorVerticalHairline(edges.right, checkbox, "TOPRIGHT", "BOTTOMRIGHT")
     end
     for _, edge in pairs(checkbox._cxhBorder) do
-        edge:SetColorTexture(EUI_BORDER_COLOR[1], EUI_BORDER_COLOR[2], EUI_BORDER_COLOR[3], EUI_BORDER_COLOR[4])
+        edge:SetColorTexture(unpack(EUI_BORDER_COLOR))
     end
 
     local checked = checkbox.GetCheckedTexture and checkbox:GetCheckedTexture()
@@ -116,13 +117,8 @@ local function FlattenCheckbox(checkbox)
     checked:SetTexture(nil)
     checked:SetColorTexture(r, g, b, 1)
     checked:ClearAllPoints()
-    if PixelUtil and PixelUtil.SetPoint then
-        PixelUtil.SetPoint(checked, "TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
-        PixelUtil.SetPoint(checked, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
-    else
-        checked:SetPoint("TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
-        checked:SetPoint("BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
-    end
+    SetPointPixel(checked, "TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
+    SetPointPixel(checked, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
 end
 
 local function SkinContainer()
