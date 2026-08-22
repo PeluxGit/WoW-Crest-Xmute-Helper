@@ -14,64 +14,92 @@ if not (EllesmereUI and EllesmereUI.RegisterSkin) then return end
 
 local UI = Addon.UI or {}
 
--- EllesmereUI-specific scale multipliers, relative to the base UI constants
+-- Multipliers on top of the base UI scale constants
 local EUI_CHECKBOX_SCALE_MULT = 0.7
 local EUI_ADDMODE_SCALE_MULT = 0.7
 
 -- Gap (px) between the checked-state accent fill and the checkbox border
 local EUI_CHECK_INSET = 2.5
 
--- Outward bleed (px) so our background fill meets EUI's border art
-local EUI_BG_BLEED = 1
+-- Translucent border, matching EllesmereUI's own checkbox style
+local EUI_BORDER_COLOR = { 1, 1, 1, 0.35 }
 
--- Set once EllesmereUI invokes our registered callback; primitives are idempotent
--- so it's safe to call them again from refresh hooks once this is populated.
+-- Translucent fill, same technique, paler than S.GetPanelColor()
+local EUI_CHECKBOX_BG = { 1, 1, 1, 0.1 }
+
+-- Set when EllesmereUI's skin callback fires
 local S
 
--- Re-font to the user's chosen EUI font, forcing white (used for static
--- header/label text where we don't manage a custom color ourselves).
+-- Static labels only; forces white
 local function FontWhite(fs)
     if not S or not fs then return end
     if S.Font then S.Font(fs) end
     if S.White then S.White(fs) end
 end
 
--- Re-font only, leaving color alone (used where we set the color dynamically,
--- e.g. row names that shift between gold/grey, or dimmed hint text).
+-- Leaves dynamically-set colors alone (row names, hints)
 local function FontOnly(fs)
     if not S or not fs then return end
     if S.Font then S.Font(fs) end
 end
 
--- Skins the box/border via S.Checkbox(), then replaces Blizzard's gold
--- checkmark glyph with a flat accent-color fill (EUI's toggle style) and
--- paints our own background behind it. Colors are re-read every call so
--- live S.OnLooksChanged theme changes stay in sync.
+-- 1px pixel-snapped hairline along one edge (top or bottom)
+local function AnchorHorizontalHairline(tex, checkbox, corner1, corner2)
+    if PixelUtil and PixelUtil.SetPoint then
+        PixelUtil.SetPoint(tex, corner1, checkbox, corner1, 0, 0)
+        PixelUtil.SetPoint(tex, corner2, checkbox, corner2, 0, 0)
+        PixelUtil.SetHeight(tex, 1)
+    else
+        tex:SetPoint(corner1, checkbox, corner1, 0, 0)
+        tex:SetPoint(corner2, checkbox, corner2, 0, 0)
+        tex:SetHeight(1)
+    end
+end
+
+-- Inset 1px so corners don't double-overlap the horizontal hairlines
+local function AnchorVerticalHairline(tex, checkbox, topCorner, bottomCorner)
+    if PixelUtil and PixelUtil.SetPoint then
+        PixelUtil.SetPoint(tex, topCorner, checkbox, topCorner, 0, -1)
+        PixelUtil.SetPoint(tex, bottomCorner, checkbox, bottomCorner, 0, 1)
+        PixelUtil.SetWidth(tex, 1)
+    else
+        tex:SetPoint(topCorner, checkbox, topCorner, 0, -1)
+        tex:SetPoint(bottomCorner, checkbox, bottomCorner, 0, 1)
+        tex:SetWidth(tex, 1)
+    end
+end
+
+-- Draws box/border manually; S.Checkbox()'s own border is opaque and too thick here
 local function FlattenCheckbox(checkbox)
     if not S or not checkbox then return end
-    S.Checkbox(checkbox, { stockCheck = true })
 
-    -- SetNormalTexture(nil) errors on current clients; clear the region directly.
-    local normalTex = checkbox.GetNormalTexture and checkbox:GetNormalTexture()
-    if normalTex then
-        normalTex:SetTexture(nil)
+    for _, getter in ipairs({ "GetNormalTexture", "GetPushedTexture", "GetHighlightTexture", "GetDisabledTexture" }) do
+        local tex = checkbox[getter] and checkbox[getter](checkbox)
+        if tex then tex:SetTexture(nil) end
     end
 
     if not checkbox._cxhBg then
         checkbox._cxhBg = checkbox:CreateTexture(nil, "BACKGROUND")
-        if PixelUtil and PixelUtil.SetPoint then
-            PixelUtil.SetPoint(checkbox._cxhBg, "TOPLEFT", checkbox, "TOPLEFT", -EUI_BG_BLEED, EUI_BG_BLEED)
-            PixelUtil.SetPoint(checkbox._cxhBg, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", EUI_BG_BLEED, -EUI_BG_BLEED)
-        else
-            checkbox._cxhBg:SetPoint("TOPLEFT", checkbox, "TOPLEFT", -EUI_BG_BLEED, EUI_BG_BLEED)
-            checkbox._cxhBg:SetPoint("BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", EUI_BG_BLEED, -EUI_BG_BLEED)
-        end
+        checkbox._cxhBg:SetAllPoints(checkbox)
     end
-    local pr, pg, pb, pa = 0.16, 0.16, 0.16, 1
-    if S.GetPanelColor then
-        pr, pg, pb, pa = S.GetPanelColor()
+    checkbox._cxhBg:SetColorTexture(EUI_CHECKBOX_BG[1], EUI_CHECKBOX_BG[2], EUI_CHECKBOX_BG[3], EUI_CHECKBOX_BG[4])
+
+    if not checkbox._cxhBorder then
+        checkbox._cxhBorder = {
+            top = checkbox:CreateTexture(nil, "ARTWORK"),
+            bottom = checkbox:CreateTexture(nil, "ARTWORK"),
+            left = checkbox:CreateTexture(nil, "ARTWORK"),
+            right = checkbox:CreateTexture(nil, "ARTWORK"),
+        }
+        local edges = checkbox._cxhBorder
+        AnchorHorizontalHairline(edges.top, checkbox, "TOPLEFT", "TOPRIGHT")
+        AnchorHorizontalHairline(edges.bottom, checkbox, "BOTTOMLEFT", "BOTTOMRIGHT")
+        AnchorVerticalHairline(edges.left, checkbox, "TOPLEFT", "BOTTOMLEFT")
+        AnchorVerticalHairline(edges.right, checkbox, "TOPRIGHT", "BOTTOMRIGHT")
     end
-    checkbox._cxhBg:SetColorTexture(pr, pg, pb, pa or 1)
+    for _, edge in pairs(checkbox._cxhBorder) do
+        edge:SetColorTexture(EUI_BORDER_COLOR[1], EUI_BORDER_COLOR[2], EUI_BORDER_COLOR[3], EUI_BORDER_COLOR[4])
+    end
 
     local checked = checkbox.GetCheckedTexture and checkbox:GetCheckedTexture()
     if not checked then return end
@@ -83,7 +111,6 @@ local function FlattenCheckbox(checkbox)
     checked:SetTexture(nil)
     checked:SetColorTexture(r, g, b, 1)
     checked:ClearAllPoints()
-    -- PixelUtil.SetPoint pixel-snaps the inset so it doesn't drift off the border.
     if PixelUtil and PixelUtil.SetPoint then
         PixelUtil.SetPoint(checked, "TOPLEFT", checkbox, "TOPLEFT", EUI_CHECK_INSET, -EUI_CHECK_INSET)
         PixelUtil.SetPoint(checked, "BOTTOMRIGHT", checkbox, "BOTTOMRIGHT", -EUI_CHECK_INSET, EUI_CHECK_INSET)
@@ -97,8 +124,7 @@ local function SkinContainer()
     local container = Addon.Container
     if not S or not container then return end
 
-    -- We already render our own title/Add Mode/macro button row up top, so
-    -- skip EUI's own title strip to avoid it overlapping that row.
+    -- We render our own title/Add Mode row, so skip EUI's title strip
     S.Shell(container, { noTopBar = true })
 
     if container.AddModeBtn then
@@ -109,7 +135,7 @@ local function SkinContainer()
         end
     end
 
-    -- Row checkboxes read this when they're (re)sized in list.lua's acquireRow
+    -- Read by list.lua's acquireRow when (re)sizing row checkboxes
     container._effectiveCheckboxScale = (UI.CHECKBOX_SCALE or 1) * EUI_CHECKBOX_SCALE_MULT
 
     if container.Scroll and container.Scroll.ScrollBar then
@@ -144,13 +170,12 @@ local function SkinRows()
         if cell.open then FlattenCheckbox(cell.open) end
         if cell.conf then FlattenCheckbox(cell.conf) end
         if cell.remove then S.CloseButton(cell.remove) end
-        if cell.name then FontOnly(cell.name) end   -- row item name (color set dynamically elsewhere)
-        if cell.text then FontWhite(cell.text) end  -- currency/item group divider label
+        if cell.name then FontOnly(cell.name) end
+        if cell.text then FontWhite(cell.text) end
     end
 end
 
 EllesmereUI.RegisterSkin(ADDON_NAME, function(skin)
-    -- Check if custom skinning is disabled via debug flag (forces default skin)
     if Addon.IsDebugEnabled and Addon:IsDebugEnabled("skin") then
         if Addon.DebugPrintCategory then
             Addon:DebugPrintCategory("ui", "Custom skinning disabled via debug flag - using default skin")
@@ -160,22 +185,17 @@ EllesmereUI.RegisterSkin(ADDON_NAME, function(skin)
 
     S = skin
 
-    -- Hook EnsureUI to skin the container when it's created
     if type(Addon.EnsureUI) == "function" then
         hooksecurefunc(Addon, "EnsureUI", SkinContainer)
     end
-
-    -- Hook RefreshList to skin rows as they're (re)built
     if type(Addon.RefreshList) == "function" then
         hooksecurefunc(Addon, "RefreshList", SkinRows)
     end
-
     if type(Addon.CreateMacroActionButton) == "function" then
         hooksecurefunc(Addon, "CreateMacroActionButton", SkinMacroActionButton)
     end
 
-    -- Re-flatten checkboxes (our own S.GetAccentColor() fill, not a
-    -- primitive) if the user changes their EUI accent color live.
+    -- Not primitive-driven; needs a manual re-skin on live accent/theme changes
     if S.OnLooksChanged then
         S.OnLooksChanged(function()
             SkinContainer()
@@ -183,7 +203,6 @@ EllesmereUI.RegisterSkin(ADDON_NAME, function(skin)
         end)
     end
 
-    -- Skin anything that already exists
     SkinContainer()
     SkinRows()
     SkinMacroActionButton()
