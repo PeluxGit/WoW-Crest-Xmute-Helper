@@ -30,6 +30,11 @@ local EUI_CHECKBOX_BG = { 1, 1, 1, 0.1 }
 -- Set when EllesmereUI's skin callback fires
 local S
 
+-- Re-checked on every skin pass so toggling the flag live takes effect
+local function IsSkinDisabled()
+    return Addon.IsDebugEnabled and Addon:IsDebugEnabled("skin")
+end
+
 -- Static labels only; forces white
 local function FontWhite(fs)
     if not S or not fs then return end
@@ -65,7 +70,7 @@ local function AnchorVerticalHairline(tex, checkbox, topCorner, bottomCorner)
     else
         tex:SetPoint(topCorner, checkbox, topCorner, 0, -1)
         tex:SetPoint(bottomCorner, checkbox, bottomCorner, 0, 1)
-        tex:SetWidth(tex, 1)
+        tex:SetWidth(1)
     end
 end
 
@@ -122,10 +127,10 @@ end
 
 local function SkinContainer()
     local container = Addon.Container
-    if not S or not container then return end
+    if not S or not container or IsSkinDisabled() then return end
 
     -- We render our own title/Add Mode row, so skip EUI's title strip
-    S.Shell(container, { noTopBar = true })
+    if S.Shell then S.Shell(container, { noTopBar = true }) end
 
     if container.AddModeBtn then
         FlattenCheckbox(container.AddModeBtn)
@@ -138,7 +143,7 @@ local function SkinContainer()
     -- Read by list.lua's acquireRow when (re)sizing row checkboxes
     container._effectiveCheckboxScale = (UI.CHECKBOX_SCALE or 1) * EUI_CHECKBOX_SCALE_MULT
 
-    if container.Scroll and container.Scroll.ScrollBar then
+    if container.Scroll and container.Scroll.ScrollBar and S.ScrollBar then
         S.ScrollBar(container.Scroll.ScrollBar)
     end
 
@@ -152,55 +157,60 @@ end
 
 local function SkinMacroActionButton()
     local button = Addon.MacroActionButton
-    if not S or not button then return end
+    if not S or not button or IsSkinDisabled() then return end
 
-    S.Button(button, { "icon", "NormalTexture", "SlotBackground" })
-    if button.icon then
+    if S.Button then S.Button(button, { "icon", "NormalTexture", "SlotBackground" }) end
+    if button.icon and S.SquareIcon then
         S.SquareIcon(button.icon)
     end
 end
 
 local function SkinRows()
     local container = Addon.Container
-    if not S or not container or not container.Content or not container.Content.cells then return end
+    if not S or not container or not container.Content or not container.Content.cells or IsSkinDisabled() then return end
 
     for _, cell in ipairs(container.Content.cells) do
-        if cell.icon then S.SquareIcon(cell.icon) end
+        if cell.icon and S.SquareIcon then S.SquareIcon(cell.icon) end
         if cell.buy then FlattenCheckbox(cell.buy) end
         if cell.open then FlattenCheckbox(cell.open) end
         if cell.conf then FlattenCheckbox(cell.conf) end
-        if cell.remove then S.CloseButton(cell.remove) end
+        if cell.remove and S.CloseButton then S.CloseButton(cell.remove) end
         if cell.name then FontOnly(cell.name) end
         if cell.text then FontWhite(cell.text) end
     end
 end
 
+-- Guards against EllesmereUI ever invoking the skin callback more than once
+local hooksInstalled = false
+
 EllesmereUI.RegisterSkin(ADDON_NAME, function(skin)
-    if Addon.IsDebugEnabled and Addon:IsDebugEnabled("skin") then
+    S = skin
+
+    if not hooksInstalled then
+        hooksInstalled = true
+        if type(Addon.EnsureUI) == "function" then
+            hooksecurefunc(Addon, "EnsureUI", SkinContainer)
+        end
+        if type(Addon.RefreshList) == "function" then
+            hooksecurefunc(Addon, "RefreshList", SkinRows)
+        end
+        if type(Addon.CreateMacroActionButton) == "function" then
+            hooksecurefunc(Addon, "CreateMacroActionButton", SkinMacroActionButton)
+        end
+        -- Not primitive-driven; needs a manual re-skin on live accent/theme changes
+        if S.OnLooksChanged then
+            S.OnLooksChanged(function()
+                SkinContainer()
+                SkinRows()
+            end)
+        end
+    end
+
+    if IsSkinDisabled() then
         if Addon.DebugPrintCategory then
             Addon:DebugPrintCategory("ui", "Custom skinning disabled via debug flag - using default skin")
         end
         return
-    end
-
-    S = skin
-
-    if type(Addon.EnsureUI) == "function" then
-        hooksecurefunc(Addon, "EnsureUI", SkinContainer)
-    end
-    if type(Addon.RefreshList) == "function" then
-        hooksecurefunc(Addon, "RefreshList", SkinRows)
-    end
-    if type(Addon.CreateMacroActionButton) == "function" then
-        hooksecurefunc(Addon, "CreateMacroActionButton", SkinMacroActionButton)
-    end
-
-    -- Not primitive-driven; needs a manual re-skin on live accent/theme changes
-    if S.OnLooksChanged then
-        S.OnLooksChanged(function()
-            SkinContainer()
-            SkinRows()
-        end)
     end
 
     SkinContainer()
