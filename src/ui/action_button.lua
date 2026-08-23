@@ -49,9 +49,21 @@ local function ApplyMacro(button)
         if button.SlotBackground then
             button.SlotBackground:Hide()
         end
+
+        -- Icon reflects the next click's target: buy takes priority over open
+        local openItemID, buyItemID = Addon:GetNextMacroActions()
+        button.nextOpenItemID = openItemID
+        button.nextBuyItemID = buyItemID
+        local iconItemID = buyItemID or openItemID
+        if iconItemID and button.icon then
+            button.icon:SetTexture(Addon:GetItemIcon(iconItemID))
+            button.icon:Show()
+        end
     else
         button.macroIndex = nil
         button.macroName = nil
+        button.nextOpenItemID = nil
+        button.nextBuyItemID = nil
         button:SetAttribute("type", nil)
         button:SetAttribute("macro", nil)
         if button.icon then
@@ -136,7 +148,17 @@ function Addon:CreateMacroActionButton(parent)
         if self.macroIndex then
             local name = self.macroName or MACRO_NAME
             GameTooltip:SetText(name, 1, 1, 1)
-            GameTooltip:AddLine("Click or keybind to run the CrestX-Open macro.", 0.7, 0.7, 0.7, true)
+            if self.nextBuyItemID then
+                local buyName = GetItemInfo(self.nextBuyItemID) or ("item:" .. self.nextBuyItemID)
+                GameTooltip:AddLine("Will buy: " .. buyName, 0.7, 0.7, 0.7, true)
+            end
+            if self.nextOpenItemID then
+                local openName = GetItemInfo(self.nextOpenItemID) or ("item:" .. self.nextOpenItemID)
+                GameTooltip:AddLine("Will open: " .. openName, 0.7, 0.7, 0.7, true)
+            end
+            if not self.nextBuyItemID and not self.nextOpenItemID then
+                GameTooltip:AddLine("Nothing to buy or open right now.", 0.7, 0.7, 0.7, true)
+            end
         else
             GameTooltip:SetText("CrestX-Open Macro", 1, 1, 1)
             GameTooltip:AddLine("Create the macro via a Crest Xmute vendor to enable this button.", 0.7, 0.7, 0.7, true)

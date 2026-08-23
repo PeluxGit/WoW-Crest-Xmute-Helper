@@ -68,6 +68,7 @@ local function MakeMovable(frame)
     frame._moving = false
     frame:SetScript("OnMouseDown", function(self, btn)
         if btn ~= "LeftButton" then return end
+        if CrestXmuteDB and CrestXmuteDB.collapsed then return end -- pinned tab isn't draggable
         if not self.Scroll then
             self:StartMoving(); self._moving = true; return
         end
@@ -132,6 +133,16 @@ local function DockOutsideMerchant(f)
     end
 end
 
+-- Pins the collapsed tab flush against the vendor window, top edges aligned
+local function DockTab(f)
+    f:ClearAllPoints()
+    if MerchantFrame and MerchantFrame:IsShown() then
+        f:SetPoint("TOPLEFT", MerchantFrame, "TOPRIGHT", 0, 0)
+    else
+        f:SetPoint("CENTER", UIParent, "CENTER")
+    end
+end
+
 -- Add Mode: hook merchant item buttons to add items to tracking on click
 local function GetMerchantItemButton(i) return _G["MerchantItem" .. i .. "ItemButton"] end
 
@@ -188,6 +199,112 @@ function Addon:SetAddMode(flag)
     if flag then self:_HookMerchantButtonsForAddMode() else self:_UnhookMerchantButtonsForAddMode() end
 end
 
+-- Full title top-left, macro button + Add Mode + toggle in a row at top-right
+local function LayoutExpandedChrome(container)
+    local title = container.Title
+    local actionButton = Addon.MacroActionButton
+    local addMode = container.AddModeBtn
+    local lbl = addMode and addMode.Label
+    local toggleBtn = container.ToggleBtn
+
+    if title then
+        title:ClearAllPoints()
+        title:SetPoint("TOPLEFT", 10, -8)
+        title:SetText("Crest Xmute Helper")
+    end
+
+    if actionButton then
+        actionButton:ClearAllPoints()
+        actionButton:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
+        actionButton:Show()
+    end
+
+    if addMode then
+        addMode:ClearAllPoints()
+        addMode:SetPoint("RIGHT", actionButton or container, "LEFT", -8, 0)
+        addMode:Show()
+    end
+
+    if lbl then
+        lbl:ClearAllPoints()
+        lbl:SetPoint("RIGHT", addMode, "LEFT", -4, 0)
+        lbl:Show()
+    end
+
+    if toggleBtn then
+        toggleBtn:ClearAllPoints()
+        toggleBtn:SetPoint("RIGHT", lbl or addMode or container, "LEFT", -8, 0)
+        toggleBtn:SetText("<")
+    end
+end
+
+-- Abbreviated title on top, then [macro button, toggle] or [Add Mode, toggle]
+-- below it depending on hasItems; returns the tight width/height needed
+local function LayoutCollapsedChrome(container, hasItems)
+    local title = container.Title
+    local actionButton = Addon.MacroActionButton
+    local addMode = container.AddModeBtn
+    local lbl = addMode and addMode.Label
+    local toggleBtn = container.ToggleBtn
+
+    local padLR, padTop, gap = 8, 6, 6
+
+    if title then
+        title:ClearAllPoints()
+        title:SetPoint("TOP", container, "TOP", 0, -padTop)
+        title:SetText("CXH")
+    end
+    local titleH = (title and title:GetHeight()) or 12
+    local titleW = (title and title:GetWidth()) or 0
+    local rowY = -(padTop + titleH + 4)
+
+    local rowW, rowH = 0, 0
+    if hasItems then
+        if addMode then addMode:Hide() end
+        if lbl then lbl:Hide() end
+        if actionButton then
+            actionButton:ClearAllPoints()
+            actionButton:SetPoint("TOPLEFT", container, "TOPLEFT", padLR, rowY)
+            actionButton:Show()
+            rowW = rowW + actionButton:GetWidth()
+            rowH = math.max(rowH, actionButton:GetHeight())
+        end
+        if toggleBtn then
+            toggleBtn:ClearAllPoints()
+            toggleBtn:SetPoint("LEFT", actionButton or container, "RIGHT", gap, 0)
+        end
+    else
+        if actionButton then actionButton:Hide() end
+        if addMode then
+            addMode:ClearAllPoints()
+            addMode:SetPoint("TOPLEFT", container, "TOPLEFT", padLR, rowY)
+            addMode:Show()
+            rowW = rowW + addMode:GetWidth()
+            rowH = math.max(rowH, addMode:GetHeight())
+        end
+        if lbl then
+            lbl:ClearAllPoints()
+            lbl:SetPoint("LEFT", addMode, "RIGHT", 4, 0)
+            lbl:Show()
+            rowW = rowW + 4 + lbl:GetWidth()
+            rowH = math.max(rowH, lbl:GetHeight())
+        end
+        if toggleBtn then
+            toggleBtn:ClearAllPoints()
+            toggleBtn:SetPoint("LEFT", lbl or addMode or container, "RIGHT", gap, 0)
+        end
+    end
+    if toggleBtn then
+        rowW = rowW + gap + toggleBtn:GetWidth()
+        rowH = math.max(rowH, toggleBtn:GetHeight())
+        toggleBtn:SetText(">")
+    end
+
+    local width = math.max(padLR * 2 + rowW, padLR * 2 + titleW)
+    local height = padTop + titleH + 4 + rowH + padTop
+    return width, height
+end
+
 function Addon:EnsureUI()
     if self.Container then return end
 
@@ -199,6 +316,7 @@ function Addon:EnsureUI()
 
     local container = CreateFrame("Frame", "CrestXmutePanel", UIParent, "InsetFrameTemplate3")
     container:SetSize(baseW, 340)
+    container._baseWidth = baseW
     container:SetFrameStrata("HIGH")
     container:SetClampedToScreen(true)
     MakeMovable(container)
@@ -227,28 +345,27 @@ function Addon:EnsureUI()
     end
 
     local title = container:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    title:SetPoint("TOPLEFT", 10, -8)
-    title:SetText("Crest Xmute Helper")
     container.Title = title
 
     -- Create macro action button (single-slot action bar)
     local actionButton = self:CreateMacroActionButton(container)
-    if actionButton then
-        actionButton:ClearAllPoints()
-        actionButton:SetPoint("TOPRIGHT", container, "TOPRIGHT", -10, -6)
-    end
 
     local addMode = CreateFrame("CheckButton", nil, container, "UICheckButtonTemplate")
     if UI.SetScaledSize then
         UI.SetScaledSize(addMode, UI.ADDMODE_SCALE)
     end
-    addMode:SetPoint("RIGHT", actionButton or container, "LEFT", -8, 0)
     addMode:SetScript("OnClick", function(self) Addon:SetAddMode(self:GetChecked()) end)
     local lbl = container:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    lbl:SetPoint("RIGHT", addMode, "LEFT", -4, 0)
     lbl:SetText("Add Mode")
     addMode.Label = lbl
     container.AddModeBtn = addMode
+
+    local toggleBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
+    toggleBtn:SetSize(20, 20)
+    toggleBtn:SetScript("OnClick", function() Addon:SetCollapsed(not (CrestXmuteDB and CrestXmuteDB.collapsed)) end)
+    container.ToggleBtn = toggleBtn
+
+    LayoutExpandedChrome(container)
 
     container.HeadersY = ComputeTopChrome(actionButton, addMode, lbl)
 
@@ -336,12 +453,46 @@ function Addon:EnsureUI()
     self.Container = container
 end
 
+-- Collapses to a pinned tab (list/headers hidden) or restores the full view
+function Addon:SetCollapsed(flag)
+    flag = not not flag
+    local container = self.Container
+    if not container then return end
+
+    CrestXmuteDB = CrestXmuteDB or {}
+    CrestXmuteDB.collapsed = flag
+
+    if flag then
+        if container.Scroll then container.Scroll:Hide() end
+        if container._hdrBuy then container._hdrBuy:Hide() end
+        if container._hdrOpen then container._hdrOpen:Hide() end
+        if container._hdrConf then container._hdrConf:Hide() end
+        if container.Header then container.Header:Hide() end
+        if container.EmptyState then container.EmptyState:Hide() end
+
+        local hasItems = Addon.MerchantHasTracked and Addon:MerchantHasTracked()
+        local w, h = LayoutCollapsedChrome(container, hasItems)
+        container:SetSize(w, h)
+        DockTab(container)
+    else
+        if not ApplySavedPosition(container) then
+            DockOutsideMerchant(container)
+        end
+        container:SetWidth(container._baseWidth or container:GetWidth())
+        LayoutExpandedChrome(container)
+        if container.Scroll then container.Scroll:Show() end
+        if container._hdrBuy then container._hdrBuy:Show() end
+        if container._hdrOpen then container._hdrOpen:Show() end
+        if container._hdrConf then container._hdrConf:Show() end
+        if container.Header then container.Header:Show() end
+        if self.RefreshList then self:RefreshList() end
+    end
+end
+
 function Addon:ShowUIForMerchant()
     self:EnsureUI()
-    if not (CrestXmuteDB and CrestXmuteDB.framePos) then
-        DockOutsideMerchant(self.Container)
-    end
     self.Container:Show()
+    self:SetCollapsed(CrestXmuteDB and CrestXmuteDB.collapsed or false)
 
     -- Columns already computed in EnsureUI; no need to recalc for fixed-width panel
     if self.RefreshList then

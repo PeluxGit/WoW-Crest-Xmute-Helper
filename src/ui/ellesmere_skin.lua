@@ -136,6 +136,11 @@ local function SkinContainer()
         end
     end
 
+    if container.ToggleBtn then
+        if S.Button then S.Button(container.ToggleBtn) end
+        FontWhite(container.ToggleBtn.GetFontString and container.ToggleBtn:GetFontString())
+    end
+
     -- Read by list.lua's acquireRow when (re)sizing row checkboxes
     container._effectiveCheckboxScale = (UI.CHECKBOX_SCALE or 1) * EUI_CHECKBOX_SCALE_MULT
 

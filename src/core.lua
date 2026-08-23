@@ -38,6 +38,7 @@ function Addon:EnsureDB()
 
     -- Settings
     CrestXmuteDB.framePos = CrestXmuteDB.framePos or nil -- window position
+    CrestXmuteDB.collapsed = CrestXmuteDB.collapsed or false -- panel collapsed to a pinned tab
 end
 
 function Addon:IsSeeded(id)

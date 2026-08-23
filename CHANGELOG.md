@@ -2,6 +2,11 @@
 
 ## [2026-08-22]
 
+### Added
+
+- Collapsible panel: collapse to a small pinned tab next to the vendor window, or pull it back out. Now shows on every vendor, not just ones with tracked items.
+- The buy/open button's icon and tooltip now reflect what the next click will actually do.
+
 ### Fixed
 
 - Fixed EllesmereUI skin.

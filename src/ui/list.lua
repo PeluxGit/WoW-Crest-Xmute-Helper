@@ -88,6 +88,7 @@ local function Wipe(t) for k in pairs(t) do t[k] = nil end end
 
 function Addon:RefreshList()
     if not self.Container or not self.Container:IsVisible() then return end
+    if CrestXmuteDB and CrestXmuteDB.collapsed then return end -- rebuilt on next expand instead
     if self._isRefreshing then return end
     self._isRefreshing               = true
     local container, content, scroll = self.Container, self.Container.Content, self.Container.Scroll

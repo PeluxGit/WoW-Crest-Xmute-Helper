@@ -57,7 +57,7 @@ function Addon:PreloadMerchantItemData()
     end
 end
 
--- true if current merchant sells any tracked item (seed + user)
+-- True if current merchant sells any tracked item (seed + user)
 function Addon:MerchantHasTracked()
     if not MerchantFrame or not MerchantFrame:IsShown() then return false end
     local tracked = Addon.GetTrackedUnion and Addon:GetTrackedUnion() or {}
@@ -87,30 +87,21 @@ f:SetScript("OnEvent", function(self, event, arg1, arg2)
         -- Small delay (30ms) to let item data populate from server before scanning
         C_Timer.After(0.03, function()
             Addon:PreloadMerchantItemData()
-            if Addon:MerchantHasTracked() then
-                Addon:ShowUIForMerchant()
-            else
-                Addon:HideUI()
-            end
+            Addon:ShowUIForMerchant()
         end)
         return
     end
 
     if event == "MERCHANT_UPDATE" then
-        -- show/hide depending on tracked availability
         Addon:PreloadMerchantItemData()
-        if Addon:MerchantHasTracked() then
-            if not (Addon.Container and Addon.Container:IsShown()) then
-                Addon:ShowUIForMerchant()
-                return
-            end
-            ThrottledRefresh()
-            -- Sync macro after merchant update (e.g., after buying an item)
-            if Addon.SyncOpenMacro then
-                Addon:SyncOpenMacro(true)
-            end
-        else
-            Addon:HideUI()
+        if not (Addon.Container and Addon.Container:IsShown()) then
+            Addon:ShowUIForMerchant()
+            return
+        end
+        ThrottledRefresh()
+        -- Sync macro after merchant update (e.g., after buying an item)
+        if Addon.SyncOpenMacro then
+            Addon:SyncOpenMacro(true)
         end
         return
     end

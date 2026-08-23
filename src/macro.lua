@@ -16,6 +16,21 @@ local function BuildBuySnippet(itemID)
         itemID)
 end
 
+-- What the next macro click will do: openItemID and buyItemID (either may be nil)
+function Addon:GetNextMacroActions()
+    local openItemID
+    local openIDs = Addon:CollectTrackedIDsInBags(MAX_BAG_ITEMS)
+    for _, itemID in ipairs(openIDs) do
+        local tog = Addon:GetItemToggles(itemID)
+        if tog.open then
+            openItemID = itemID
+            break -- Only one /use line needed
+        end
+    end
+    local buyItemID = Addon:GetTopAffordableSingle()
+    return openItemID, buyItemID
+end
+
 -- Compose the macro body (<= 255 chars) from:
 -- - ONE /use item:<id> line for the first tracked+enabled item in bags (only one can be used per click)
 -- - Buy one top-priority affordable item with Buy enabled (optional confirm click)
@@ -25,19 +40,14 @@ function Addon:BuildMacroBody()
     -- Add #showtooltip at the top (will show tooltip of the /use command on action bar)
     parts[#parts + 1] = "#showtooltip"
 
+    local openItemID, topId = Addon:GetNextMacroActions()
+
     -- Add ONE /use item:<id> for the first item present in bags with Open enabled
-    -- (Only one item can be used per macro execution anyway)
-    local openIDs = Addon:CollectTrackedIDsInBags(MAX_BAG_ITEMS)
-    for _, itemID in ipairs(openIDs) do
-        local tog = Addon:GetItemToggles(itemID)
-        if tog.open then
-            parts[#parts + 1] = "/use item:" .. itemID
-            break -- Only one /use line needed
-        end
+    if openItemID then
+        parts[#parts + 1] = "/use item:" .. openItemID
     end
 
     -- Then: Buy one top-priority affordable item with Buy enabled
-    local topId = Addon:GetTopAffordableSingle()
     local buyLine = BuildBuySnippet(topId)
     if buyLine then
         parts[#parts + 1] = buyLine

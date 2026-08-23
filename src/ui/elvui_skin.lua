@@ -211,6 +211,16 @@ local function ApplyElvUISkin()
             AddCheckboxHoverEffect(container.AddModeBtn)
         end
 
+        -- Skin the collapse/expand toggle button
+        if container.ToggleBtn then
+            if S and S.HandleButton then
+                local success, err = pcall(S.HandleButton, S, container.ToggleBtn)
+                if not success then
+                    print("|cffff0000[CrestXmute]|r ElvUI HandleButton (toggle) failed:", err)
+                end
+            end
+        end
+
         -- Store the effective checkbox scale for positioning calculations
         local baseCheckboxScale = UI.CHECKBOX_SCALE
         container._effectiveCheckboxScale = baseCheckboxScale * ELVUI_CHECKBOX_SCALE_MULT
