@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-08-30]
+
+### Changed
+
+- Misc. improvements and fixes
+
 ## [2026-08-22]
 
 ### Added

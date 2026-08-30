@@ -92,7 +92,7 @@ function Addon:CreateMacroActionButton(parent)
     end
     button:ClearAllPoints()
     button:SetPoint("TOPLEFT", anchorParent, "TOPRIGHT", 0, 0)
-    button:SetFrameStrata("HIGH")
+    button:SetFrameStrata("MEDIUM") -- match panel strata; see panel.lua for why
     button:RegisterForClicks("AnyUp", "AnyDown")
     button:EnableMouse(true)
     button:SetAttribute("checkselfcast", true)

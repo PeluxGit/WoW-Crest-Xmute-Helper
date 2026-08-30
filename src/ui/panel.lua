@@ -317,7 +317,7 @@ function Addon:EnsureUI()
     local container = CreateFrame("Frame", "CrestXmutePanel", UIParent, "InsetFrameTemplate3")
     container:SetSize(baseW, 340)
     container._baseWidth = baseW
-    container:SetFrameStrata("HIGH")
+    container:SetFrameStrata("MEDIUM") -- avoid covering non-movable Blizzard dialogs
     container:SetClampedToScreen(true)
     MakeMovable(container)
 
@@ -453,14 +453,19 @@ function Addon:EnsureUI()
     self.Container = container
 end
 
--- Collapses to a pinned tab (list/headers hidden) or restores the full view
-function Addon:SetCollapsed(flag)
+-- Collapses to a pinned tab (list/headers hidden) or restores the full view.
+-- persist (default true) controls whether this becomes the saved preference;
+-- pass false for automatic state changes (e.g. auto-collapsing on an empty vendor)
+-- that shouldn't overwrite what the user last chose explicitly.
+function Addon:SetCollapsed(flag, persist)
     flag = not not flag
     local container = self.Container
     if not container then return end
 
     CrestXmuteDB = CrestXmuteDB or {}
-    CrestXmuteDB.collapsed = flag
+    if persist ~= false then
+        CrestXmuteDB.collapsed = flag
+    end
 
     if flag then
         if container.Scroll then container.Scroll:Hide() end
@@ -492,7 +497,15 @@ end
 function Addon:ShowUIForMerchant()
     self:EnsureUI()
     self.Container:Show()
-    self:SetCollapsed(CrestXmuteDB and CrestXmuteDB.collapsed or false)
+
+    local hasItems = Addon.MerchantHasTracked and Addon:MerchantHasTracked()
+    if hasItems then
+        self:SetCollapsed(CrestXmuteDB and CrestXmuteDB.collapsed or false)
+    else
+        -- Vendor has nothing tracked: open collapsed, but don't overwrite the
+        -- user's saved preference for vendors that do have tracked items.
+        self:SetCollapsed(true, false)
+    end
 
     -- Columns already computed in EnsureUI; no need to recalc for fixed-width panel
     if self.RefreshList then
