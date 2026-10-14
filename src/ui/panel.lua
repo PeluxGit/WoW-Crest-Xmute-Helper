@@ -1,6 +1,8 @@
 -- ui/panel.lua
 -- Builds the main UI container, headers, and Add Mode; handles window positioning and visibility
 local ADDON_NAME, Addon = ...
+local GetItemInfo = C_Item.GetItemInfo
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
 
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI

@@ -1,11 +1,16 @@
 -- tracking.lua
 -- Track set management (seed + user), per-item toggles, and merchant entry collection
 local ADDON_NAME, Addon = ...
+local GetItemInfo = C_Item.GetItemInfo
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
+local GetItemCount = C_Item.GetItemCount
+local GetItemIcon = C_Item.GetItemIconByID
 
 -- SavedVariables schema:
 -- CrestXmuteDB.user.tracked[itemID] = true
 -- CrestXmuteDB.user.toggles[itemID] = { buy=true, open=true, confirm=true }
 -- CrestXmuteDB.user.row[itemID] = rank (lower = higher priority for drag-to-reorder)
+-- CrestXmuteDB.user.groupOrder[costKey] = rank (lower = higher priority for currency group drag-to-reorder)
 -- CrestXmuteDB.framePos = { point, relName, relPoint, x, y }
 
 -- True if the item is part of the season seed list (always tracked)

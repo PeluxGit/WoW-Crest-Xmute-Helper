@@ -1,5 +1,15 @@
 # Changelog
 
+## [tbd]
+
+### Added
+
+- Currency groups can now be reordered: drag a group's header up or down. The top group is bought from first.
+
+### Fixed
+
+- Fixed errors on patch 12.1.5 caused by removed item API functions.
+
 ## [2026-09-11]
 
 ### Changed

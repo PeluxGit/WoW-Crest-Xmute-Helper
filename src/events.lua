@@ -1,6 +1,7 @@
 -- events.lua
 -- Central event hub for showing/hiding UI and refreshing data
 local ADDON_NAME, Addon = ...
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("ADDON_LOADED")

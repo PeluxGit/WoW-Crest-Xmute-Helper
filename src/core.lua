@@ -1,6 +1,7 @@
 -- core.lua
 -- Core addon namespace, DB schema, defaults, and shared helpers
 local ADDON_NAME, Addon = ...
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
 if not Addon then
     Addon = {}; _G[ADDON_NAME] = Addon
 end
@@ -35,6 +36,7 @@ function Addon:EnsureDB()
     u.selected = u.selected or {} -- per-item enable (nil/true=enabled, false=disabled)
     u.row = u.row or {}           -- row order: [itemID]=rank (lower = higher)
     u.toggles = u.toggles or {}   -- per-item toggles: [itemID] = {buy=true, open=true, confirm=true}
+    u.groupOrder = u.groupOrder or {} -- currency group order: [costKey]=rank (lower = higher)
 
     -- Settings
     CrestXmuteDB.framePos = CrestXmuteDB.framePos or nil -- window position
@@ -82,6 +84,20 @@ function Addon:SetRankOrder(orderList)
     -- orderList: array of itemIDs in desired top->bottom order
     for i, id in ipairs(orderList) do
         CrestXmuteDB.user.row[id] = i
+    end
+end
+
+-- Currency group rank: lower value = higher priority. Unranked groups sort last (then by key).
+function Addon:GetGroupRank(costKey)
+    local order = CrestXmuteDB and CrestXmuteDB.user and CrestXmuteDB.user.groupOrder
+    local r = order and order[costKey]
+    return (r ~= nil) and r or 1e9
+end
+
+function Addon:SetGroupOrder(orderList)
+    -- orderList: array of cost keys in desired top->bottom order
+    for i, key in ipairs(orderList) do
+        CrestXmuteDB.user.groupOrder[key] = i
     end
 end
 

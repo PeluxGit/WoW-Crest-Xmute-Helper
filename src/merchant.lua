@@ -1,6 +1,8 @@
 -- merchant.lua
 -- Affordability and merchant-side helpers
 local ADDON_NAME, Addon = ...
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
+local GetItemCount = C_Item.GetItemCount
 
 -- Affordability check for a merchant line index.
 -- Considers:
@@ -58,8 +60,9 @@ end
 Addon.PlayerCanAfford = PlayerCanAfford
 
 -- For Buy 1: pick the single highest-priority affordable item with Buy enabled
+-- Priority is currency group order first, then item rank within the group
 function Addon:GetTopAffordableSingle()
-    local bestId, bestIdx, bestRank
+    local bestId, bestIdx, bestRank, bestGroup
     local n = GetMerchantNumItems()
     if not n or n == 0 then return nil, nil end
     for i = 1, n do
@@ -70,8 +73,9 @@ function Addon:GetTopAffordableSingle()
                 local tog = self:GetItemToggles(id)
                 if tog.buy and Addon.PlayerCanAfford(i) then
                     local r = Addon:GetRank(id)
-                    if not bestRank or r < bestRank then
-                        bestId, bestIdx, bestRank = id, i, r
+                    local g = Addon:GetGroupRank(Addon:GetPrimaryCostKey(i))
+                    if not bestRank or g < bestGroup or (g == bestGroup and r < bestRank) then
+                        bestId, bestIdx, bestRank, bestGroup = id, i, r, g
                     end
                 end
             end

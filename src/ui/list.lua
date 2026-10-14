@@ -1,6 +1,8 @@
 -- ui/list.lua
 -- Renders tracked item rows with icons, toggles, and controls; handles scroll layout and row interactions
 local ADDON_NAME, Addon = ...
+local GetItemInfo = C_Item.GetItemInfo
+local GetItemCount = C_Item.GetItemCount
 
 Addon.UI                = Addon.UI or {}
 local UI                = Addon.UI
@@ -73,7 +75,11 @@ local function BuildGroupedEntries()
     for key in pairs(groups) do
         orderedKeys[#orderedKeys + 1] = key
     end
-    table.sort(orderedKeys)
+    table.sort(orderedKeys, function(a, b)
+        local rankA, rankB = Addon:GetGroupRank(a), Addon:GetGroupRank(b)
+        if rankA ~= rankB then return rankA < rankB end
+        return a < b
+    end)
     for _, key in ipairs(orderedKeys) do
         flatList[#flatList + 1] = { kind = "header", key = key }
         for _, row in ipairs(groups[key].rows) do
@@ -107,6 +113,7 @@ function Addon:RefreshList()
     local flat = BuildGroupedEntries()
     local y = 0
     local rows = {}
+    local groupHeaders = {}
     local candidateSet = ComputeTopCandidatesByGroup()
 
     -- Get the item that will actually be purchased (the top affordable with buy enabled)
@@ -253,7 +260,60 @@ function Addon:RefreshList()
     for _, node in ipairs(flat) do
         if node.kind == "header" then
             local h = CreateFrame("Frame", nil, content)
-            h:SetSize(1, UI.ROW_H - 6); h:SetPoint("TOPLEFT", 0, -y) -- Anchor at content edge
+            h:SetHeight(UI.ROW_H - 6); h:SetPoint("TOPLEFT", 0, -y) -- Anchor at content edge
+            h:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -y)
+            h:SetMovable(true); h:SetClampedToScreen(true); h:EnableMouse(true)
+            h.key = node.key
+            groupHeaders[#groupHeaders + 1] = h
+
+            h:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:SetText("Drag to reorder currency groups", 1, 1, 1)
+                GameTooltip:Show()
+            end)
+            h:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+            h:SetScript("OnMouseDown", function(self, button)
+                if button ~= "LeftButton" then return end
+                self.isDragging = true
+                self:SetFrameLevel((content:GetFrameLevel() or 1) + 10)
+                self:SetAlpha(0.9)
+                self:StartMoving()
+            end)
+
+            h:SetScript("OnMouseUp", function(self, button)
+                if button ~= "LeftButton" or not self.isDragging then return end
+                self.isDragging = false
+                self:StopMovingOrSizing()
+                self:SetAlpha(1)
+
+                -- Drop position is judged against each other group's full extent (header + its rows)
+                local myMid = (self:GetTop() + self:GetBottom()) / 2
+                local siblings = {}
+                for _, hf in ipairs(groupHeaders) do
+                    if hf ~= self then table.insert(siblings, hf) end
+                end
+
+                local target = #siblings + 1
+                for i, hf in ipairs(siblings) do
+                    local mid = (hf:GetTop() + (hf.lastRow or hf):GetBottom()) / 2
+                    if myMid > mid then
+                        target = i; break
+                    end
+                end
+
+                local newOrder = {}
+                for i, hf in ipairs(siblings) do
+                    if i == target then table.insert(newOrder, self.key) end
+                    table.insert(newOrder, hf.key)
+                end
+                if target == #siblings + 1 then table.insert(newOrder, self.key) end
+
+                if Addon.SetGroupOrder then Addon:SetGroupOrder(newOrder) end
+                Addon:RefreshList()
+                if Addon.SyncOpenMacro then Addon:SyncOpenMacro(true) end
+            end)
+
             local fs = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
             fs:SetPoint("LEFT", UI.LEFT_PAD, 0)
             h.text = fs
@@ -378,6 +438,7 @@ function Addon:RefreshList()
                 row.icon:SetDesaturated(false); row.name:SetTextColor(1, 0.82, 0)
             end
             y = y + UI.ROW_H; rows[#rows + 1] = row
+            if groupHeaders[#groupHeaders] then groupHeaders[#groupHeaders].lastRow = row end
             -- ensure the row and its interactive widgets are tracked so they get hidden/cleared
             content.cells[#content.cells + 1] = row
             content.cells[#content.cells + 1] = row.buy

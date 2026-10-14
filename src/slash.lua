@@ -1,6 +1,8 @@
 -- slash.lua
 -- Slash command handlers (/cxh)
 local ADDON_NAME, Addon = ...
+local GetItemInfo = C_Item.GetItemInfo
+local GetItemInfoInstant = C_Item.GetItemInfoInstant
 
 SLASH_CRESTXMUTE1 = "/cxh"
 SlashCmdList.CRESTXMUTE = function(msg)

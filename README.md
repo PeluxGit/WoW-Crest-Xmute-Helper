@@ -59,7 +59,8 @@ The macro can do up to two things per click:
 
 - The macro buys the highest priority item you can afford from the current vendor
 - **Drag items to reorder** within each currency group to set priority
-- **Currency-aware grouping** - Items are grouped by their purchase currency; priority only matters within the same currency
+- **Drag a currency header to reorder groups** - the group on top is bought from first
+- **Currency-aware grouping** - Items are grouped by their purchase currency; item priority only matters within the same currency
 - If multiple currencies are available at a vendor, only one currency group will be purchased from per click
 - Example: Tracking both Weathered and Carved crest packs at a transmutation vendor will only buy from one currency group at a time (whichever has the highest priority affordable item)
 

@@ -1,6 +1,7 @@
 -- ui/action_button.lua
 -- Single secure button that always fires the CrestX-Open macro
 local ADDON_NAME, Addon = ...
+local GetItemInfo = C_Item.GetItemInfo
 
 local MACRO_NAME = "CrestX-Open"
 local UI = Addon.UI or {}

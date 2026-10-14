@@ -12,7 +12,7 @@ Addon.MACRO_NAME = MACRO_NAME
 local function BuildBuySnippet(itemID)
     if not itemID then return nil end
     return string.format(
-        "/run for i=1,GetMerchantNumItems()do l=GetMerchantItemLink(i)if l and GetItemInfoInstant(l)==%d then BuyMerchantItem(i)break end end",
+        "/run for i=1,GetMerchantNumItems()do l=GetMerchantItemLink(i)if l and C_Item.GetItemInfoInstant(l)==%d then BuyMerchantItem(i)break end end",
         itemID)
 end
 
