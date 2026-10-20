@@ -1,6 +1,6 @@
 # Changelog
 
-## [tbd]
+## [2026-10-20]
 
 ### Added
 
