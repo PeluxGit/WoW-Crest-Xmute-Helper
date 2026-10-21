@@ -70,7 +70,7 @@ local function MakeMovable(frame)
     frame._moving = false
     frame:SetScript("OnMouseDown", function(self, btn)
         if btn ~= "LeftButton" then return end
-        if CrestXmuteDB and CrestXmuteDB.collapsed then return end -- pinned tab isn't draggable
+        if self._collapsed then return end -- pinned tab isn't draggable
         if not self.Scroll then
             self:StartMoving(); self._moving = true; return
         end
@@ -364,7 +364,7 @@ function Addon:EnsureUI()
 
     local toggleBtn = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
     toggleBtn:SetSize(20, 20)
-    toggleBtn:SetScript("OnClick", function() Addon:SetCollapsed(not (CrestXmuteDB and CrestXmuteDB.collapsed)) end)
+    toggleBtn:SetScript("OnClick", function() Addon:SetCollapsed(not container._collapsed) end)
     container.ToggleBtn = toggleBtn
 
     LayoutExpandedChrome(container)
@@ -468,6 +468,8 @@ function Addon:SetCollapsed(flag, persist)
     if persist ~= false then
         CrestXmuteDB.collapsed = flag
     end
+    -- Live state; can differ from the saved preference (auto-collapse on empty vendors)
+    container._collapsed = flag
 
     if flag then
         if container.Scroll then container.Scroll:Hide() end
